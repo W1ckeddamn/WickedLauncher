@@ -25,5 +25,9 @@
         <!-- https://commons.wikimedia.org/wiki/File:Teawie_Party.png -->
         <file alias="teawie-spooky">teawie-spooky.png</file>
         <!-- https://commons.wikimedia.org/wiki/File:Teawie_Halloween.png -->
+        <file alias="spaceship-phoebe">spaceship-phoebe.png</file>
+        <file alias="spaceship-phoebe-xmas">spaceship-phoebe-xmas.png</file>
+        <file alias="spaceship-phoebe-bday">spaceship-phoebe-bday.png</file>
+        <file alias="spaceship-phoebe-spooky">spaceship-phoebe-spooky.png</file>
     </qresource>
 </RCC>

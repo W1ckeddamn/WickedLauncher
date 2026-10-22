@@ -3,7 +3,7 @@
     Generates all Windows, Linux and theme launcher icons from SVG sources.
 .DESCRIPTION
     Renders org.prismlauncher.PrismLauncher.svg into:
-    - org.prismlauncher.PrismLauncher_256.png (256x256 master PNG with alpha)
+    - org.prismlauncher.PrismLauncher_256.png (256x256 master PNG with alpha, centered)
     - prismlauncher.ico (multi-resolution ICO: 16, 24, 32, 48, 64, 128, 256)
     - launcher/resources/multimc/scalable/launcher.svg
     - program_info/PrismLauncher.icon/Assets/ (macOS assets)
@@ -22,15 +22,35 @@ $macAssetsDir = Join-Path $scriptDir "PrismLauncher.icon\Assets"
 
 Write-Host "Rendering $svgSource to 256x256 transparent PNG..."
 
-# Try rasterizing via Edge/Chrome headless
+# Generate temporary HTML wrapper to force exact 256x256 viewport and prevent half-rendering
+$tempHtml = Join-Path $scriptDir "temp_icon_render.html"
+$htmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 256px; height: 256px; overflow: hidden; background: transparent; }
+    img { width: 256px; height: 256px; display: block; }
+  </style>
+</head>
+<body>
+  <img src="org.prismlauncher.PrismLauncher.svg" />
+</body>
+</html>
+"@
+[System.IO.File]::WriteAllText($tempHtml, $htmlContent)
+
 $browser = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 if (-not (Test-Path $browser)) {
     $browser = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 }
 
 if (Test-Path $browser) {
-    Start-Process -FilePath $browser -ArgumentList "--headless --screenshot=`"$masterPng`" --window-size=256,256 --default-background-color=00000000 `"file:///$($svgSource.Replace('\', '/'))`"" -Wait
+    Start-Process -FilePath $browser -ArgumentList "--headless --screenshot=`"$masterPng`" --window-size=256,256 --default-background-color=00000000 `"file:///$($tempHtml.Replace('\', '/'))`"" -Wait
+    Remove-Item $tempHtml -Force -ErrorAction SilentlyContinue
 } else {
+    Remove-Item $tempHtml -Force -ErrorAction SilentlyContinue
     Write-Warning "Browser not found for headless SVG rendering, keeping current PNG"
 }
 

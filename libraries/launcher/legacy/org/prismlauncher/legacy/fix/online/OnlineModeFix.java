@@ -51,6 +51,7 @@ public final class OnlineModeFix {
         if (!((host.equals("www.minecraft.net") || host.equals("session.minecraft.net")) &&
               address.getPath().equals("/game/joinserver.jsp"))) {
             return null;
+        }
 
         // change it to "https://session.minecraft.net/game/joinserver.jsp?user=..."
         // this seems to be the modern version of the same endpoint...

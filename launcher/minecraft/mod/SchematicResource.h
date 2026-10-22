@@ -9,7 +9,6 @@
 enum class SchematicFormat { Unknown, Schematic, Schem, Litematic };
 
 class SchematicResource : public Resource {
-    Q_OBJECT
 public:
     explicit SchematicResource(QFileInfo file);
     ~SchematicResource() override = default;

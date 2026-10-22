@@ -6,7 +6,6 @@
 #include "Resource.h"
 
 class CustomPlayerModel : public Resource {
-    Q_OBJECT
 public:
     explicit CustomPlayerModel(QFileInfo file);
     virtual ~CustomPlayerModel() = default;

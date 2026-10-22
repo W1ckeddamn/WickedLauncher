@@ -6,7 +6,6 @@
 #include "Resource.h"
 
 class YesSteveModel : public Resource {
-    Q_OBJECT
  public:
      explicit YesSteveModel(QFileInfo file);
      virtual ~YesSteveModel() = default;

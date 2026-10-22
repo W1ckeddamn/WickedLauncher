@@ -1,105 +1,97 @@
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo.svg">
-  <img alt="Wicked Launcher" src="/program_info/org.prismlauncher.PrismLauncher.logo.svg" width="30%">
-</picture>
-</p>
+# Wicked Launcher
 
-<h1 align="center">Wicked Launcher</h1>
+Wicked Launcher is a customized, high-performance fork of Prism Launcher designed for enhanced flexibility, offline functionality, and advanced resource management.
 
-<p align="center">
-  <b>Wicked Launcher</b> — это форк Prism Launcher с расширенными возможностями: поддержка кастомных офлайн-аккаунтов с локальным скин-сервером, интеграция Schematic, CPM/YSM моделей, подробное логирование сбоев с минидампами и оптимизированные легковесные сборки.
-</p>
-
-<p align="center">
-  <a href="https://github.com/W1ckeddamn/WickedLauncher/actions"><img src="https://img.shields.io/github/actions/workflow/status/W1ckeddamn/WickedLauncher/build.yml?branch=develop&label=CI%20Build&logo=github" alt="CI Status"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg?logo=gnu" alt="GPL v3"></a>
-  <a href="https://github.com/W1ckeddamn/WickedLauncher/releases"><img src="https://img.shields.io/github/v/release/W1ckeddamn/WickedLauncher?label=Release&logo=github" alt="Latest Release"></a>
-</p>
+[![Build Status](https://github.com/W1ckeddamn/WickedLauncher/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/W1ckeddamn/WickedLauncher/actions)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/W1ckeddamn/WickedLauncher)](https://github.com/W1ckeddamn/WickedLauncher/releases)
 
 ---
 
-## ✨ Ключевые особенности и отличия
+## Features
 
-### 🎭 Расширенные офлайн-аккаунты (Enhanced Offline)
-* **Кастомные UUID, скины и плащи:** возможность задать любой никнейм, произвольный UUID (или автоматически сгенерировать v4 UUID), модель игрока (`classic` / `slim`), а также локальный PNG-файл скина и плаща.
-* **Встроенный локальный сервер скинов (`LocalSkinServer`):** собственный легковесный HTTP-сервер на `127.0.0.1`, реализующий протокол authlib-injector. При запуске игры ваши скины и плащи автоматически внедряются в клиент без использования внешних онлайн-сервисов!
+### Enhanced Offline Authentication
+- **Custom Player Identity:** Configure custom player names, arbitrary UUIDs (or generate RFC 4122 v4 UUIDs), player model variants (`classic` / `slim`), and local texture files (skin and cape).
+- **Embedded Local Skin Server:** Features an integrated in-process HTTP server listening on `127.0.0.1` implementing the `authlib-injector` specification. Skins and capes are served to the game client locally without requiring third-party authentication services.
+- **Direct Launch:** Launch instances offline without Microsoft account enforcement.
 
-### 🏗️ Управление схематиками (Schematics)
-* Вкладка **Schematics** в настройках инстанса (папка `schematics`).
-* Поддержка всех популярных форматов:
-  * **`.schematic`** (MCEdit / WorldEdit legacy)
-  * **`.schem`** (Sponge / WorldEdit modern)
-  * **`.litematic`** (Litematica)
-* Автоматический парсинг метаданных: размеры (ширина × высота × длина), автор, версия формата, палитра блоков и имя постройки.
+### Schematics Management
+- Dedicated **Schematics** management tab per instance (bound to the `schematics/` directory).
+- Native support for:
+  - `.schematic` (MCEdit / WorldEdit legacy format)
+  - `.schem` (Sponge / WorldEdit modern format)
+  - `.litematic` (Litematica format)
+- Automatic NBT metadata parsing: dimensions (width, height, length), author, format version, and block palette statistics.
 
-### 🕺 Модели персонажей: CPM & YSM
-* **Custom Player Models (CPM):**
-  * Вкладка в инстансе (папка `cpmmodels`).
-  * Поддержка файлов `.cpmmodel`, чтение имени модели, автора и версии.
-* **Yes Steve Model (YSM):**
-  * Вкладка в инстансе (папка `yesstevemodel`).
-  * Поддержка `.ysm`, `.zip`, `.7z` с чтением метаданных и автора.
+### Custom Player Models (CPM & YSM)
+- **Custom Player Models:** Dedicated management interface for `.cpmmodel` files with metadata inspection.
+- **Yes Steve Model:** Management interface for `.ysm`, `.zip`, and `.7z` model packages.
 
-### 🛡️ Продвинутое логирование и Crash Handler
-* **Windows:** перехват необработанных исключений (`SetUnhandledExceptionFilter`), раскрутка стека (`StackWalk64` + `dbghelp`), автоматическое сохранение подробного стектрейса и минидампа `.dmp` (`MiniDumpWriteDump`) в файл `crash.log`.
-* **Linux / macOS:** обработчики `SIGSEGV`, `SIGABRT`, `SIGBUS`, `SIGFPE` с сохранением вызовов `backtrace` в `crash.log`.
-* Потокобезопасный форматированный логгер сообщений с защитой от рекурсивных вызовов.
+### Robust Crash Handling & Diagnostics
+- **Windows:** Custom structured exception filter using `StackWalk64` and `dbghelp` to produce human-readable call stacks and automatic minidumps (`.dmp`) upon crash.
+- **Linux & macOS:** POSIX signal handlers (`SIGSEGV`, `SIGABRT`, `SIGBUS`, `SIGFPE`) capturing backtrace frames directly to `crash.log`.
+- Thread-safe, non-reentrant diagnostics logging with high-resolution timestamps.
 
-### ⚡ Оптимизированные и компактные сборки
-* Все portable-пакеты и AppImage компилируются в режиме **Release** с оптимизациями и LTO.
-* Стриппинг отладочных символов (`strip --strip-unneeded`) для Linux и Windows (MinGW), исключение промежуточных файлов PDB/ILK/LIB для MSVC.
-* Размер архивов сокращен на **60–75%** по сравнению со стандартными отладочными сборками.
+### Download Mirrors & Mod Platform Enhancements
+- Built-in support for download mirrors (BMCLAPI and MCIM) with automatic fallback mechanisms.
+- CDN fallback for restricted CurseForge mods.
+- Automated OptiFine resolution and download integration.
+
+### Optimized Package Footprint
+- Production packages configured with full compiler optimizations and Link-Time Optimization (LTO).
+- Binaries and shared libraries are stripped (`strip --strip-unneeded`) on Linux and Windows MinGW, and debugging symbols (`.pdb`, `.ilk`, `.lib`) are pruned from MSVC redistributables, reducing artifact sizes by 60–75%.
 
 ---
 
-## 🚀 Установка и загрузка
+## Downloads
 
-Готовые сборки для всех платформ доступны в разделе **[Releases](https://github.com/W1ckeddamn/WickedLauncher/releases)** и во вкладке **[GitHub Actions](https://github.com/W1ckeddamn/WickedLauncher/actions)**:
+Precompiled binaries for Linux, Windows, and macOS are available on the [Releases](https://github.com/W1ckeddamn/WickedLauncher/releases) page and via [GitHub Actions](https://github.com/W1ckeddamn/WickedLauncher/actions).
 
-| Платформа | Форматы |
+| Operating System | Package Type |
 | :--- | :--- |
-| **Windows (x64 / arm64)** | Setup Installer (`.exe`), Portable (`.zip`) |
-| **Linux (x86_64 / aarch64)** | AppImage (`.AppImage`), Portable Tarball (`.tar.gz`) |
-| **macOS (Universal)** | Disk Image (`.dmg`), Archive (`.zip`) |
+| **Windows (x86_64, ARM64)** | Setup Installer (`.exe`), Portable (`.zip`) |
+| **Linux (x86_64, AArch64)** | AppImage (`.AppImage`), Portable Tarball (`.tar.gz`) |
+| **macOS (Universal)** | Apple Disk Image (`.dmg`), Archive (`.zip`) |
 
 ---
 
-## 🛠️ Сборка из исходников
+## Building from Source
 
-### Требования
-* Компилятор C++20/C++23 (GCC 13+, Clang 16+, MSVC 2022 17.8+)
-* **CMake** 3.22 или выше
-* **Ninja**
-* **Qt** 6.6+ (Core, Gui, Widgets, Network, Concurrent, Svg, Xml, DBus на Linux)
-* **Java** Development Kit (JDK 8 или новее) для сборки вспомогательных jar-файлов
+### Prerequisites
 
-### Инструкция по сборке
+- C++20 / C++23 compliant compiler:
+  - GCC 13+
+  - Clang 16+
+  - MSVC 2022 (v143, 17.8+)
+- CMake 3.22 or later
+- Ninja build system
+- Qt 6.6 or later (Core, Gui, Widgets, Network, Concurrent, Svg, Xml, and DBus on Linux)
+- Java Development Kit (JDK 8 or later, required for packaging launcher wrappers)
+
+### Linux & macOS
 
 ```bash
-# Клонирование репозитория вместе с подмодулями
 git clone --recursive https://github.com/W1ckeddamn/WickedLauncher.git
 cd WickedLauncher
 
-# Настройка с помощью CMake presets (пример для Linux/GCC)
-cmake --preset gcc-release -DLauncher_BUILD_PLATFORM="custom"
-
-# Компиляция
+cmake --preset gcc-release -DLauncher_BUILD_PLATFORM="official"
 cmake --build --preset gcc-release
 ```
 
-На **Windows (MSVC)**:
-```pwsh
-cmake --preset msvc-release
+### Windows (MSVC)
+
+```cmd
+git clone --recursive https://github.com/W1ckeddamn/WickedLauncher.git
+cd WickedLauncher
+
+cmake --preset msvc-release -DLauncher_BUILD_PLATFORM="official"
 cmake --build --preset msvc-release
 ```
 
 ---
 
-## 📜 Лицензия и благодарности
+## License & Attribution
 
-* Wicked Launcher распространяется под лицензией **GPL-3.0-only**. Подробнее см. в файле [LICENSE](LICENSE).
-* Логотип и графические ассеты распространяются под лицензией **CC BY-SA 4.0**.
-* Данный проект является независимым форком **[Prism Launcher](https://github.com/PrismLauncher/PrismLauncher)** и **[MultiMC](https://github.com/MultiMC/Launcher)**.
-* Отдельная благодарность разработчикам **[Luna Launcher](https://github.com/AndreaFrederica/LunaLauncher)** и сообществу за идеи и наработки.
+- Wicked Launcher is licensed under the [GNU General Public License v3.0](LICENSE).
+- Artwork, logos, and branding assets are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- This project is an independent fork and is not affiliated with or endorsed by Prism Launcher, MultiMC, or Mojang Studios.

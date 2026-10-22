@@ -23,6 +23,7 @@ class FlameAPI final : public ResourceAPI {
     }
 
     static QString getModFileChangelog(int modId, int fileId);
+    static QString getCdnDownloadUrl(int fileId, const QString& fileName);
 
     static std::optional<ModPlatform::IndexedVersion> getLatestVersion(const QList<ModPlatform::IndexedVersion>& versions,
                                                                        const QList<ModPlatform::ModLoaderType>& instanceLoaders,

@@ -50,6 +50,7 @@
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 
+#include "modplatform/helpers/HashUtils.h"
 #include "modplatform/helpers/OverrideUtils.h"
 
 #include "settings/INISettingsObject.h"
@@ -67,6 +68,7 @@
 #include "minecraft/World.h"
 #include "minecraft/mod/tasks/LocalResourceParse.h"
 #include "net/ApiRequest.h"
+#include "net/ChecksumValidator.h"
 #include "ui/dialogs/UntrustedModsDialog.h"
 #include "ui/pages/modplatform/OptionalModDialog.h"
 
@@ -570,8 +572,9 @@ void FlameCreationTask::idResolverSucceeded()
             m_otherResources.append(std::make_pair(result.version.fileName, result.targetFolder));
         }
 
-        // skip optional mods that were not selected
-        if (result.version.downloadUrl.isEmpty()) {
+        // Distribution-blocked files are fetched from the CDN directly (see setupDownloadJob);
+        // only ask the user for the ones that can't be addressed there
+        if (result.version.downloadUrl.isEmpty() && FlameAPI::getCdnDownloadUrl(result.fileId, result.version.fileName).isEmpty()) {
             BlockedMod blockedMod;
             blockedMod.name = result.version.fileName;
             blockedMod.websiteUrl = QString("%1/download/%2").arg(result.pack.websiteUrl, QString::number(result.fileId));
@@ -636,9 +639,27 @@ void FlameCreationTask::setupDownloadJob()
             return;
         }
 
-        if (!result.version.downloadUrl.isEmpty()) {
-            qDebug() << "Will download" << result.version.downloadUrl << "to" << *path;
-            auto dl = Net::ApiRequest::makeFile(result.version.downloadUrl, *path);
+        auto url = result.version.downloadUrl;
+        if (url.isEmpty()) {
+            url = FlameAPI::getCdnDownloadUrl(result.fileId, result.version.fileName);
+            qDebug() << "No API download URL for" << result.version.fileName << "- using CDN URL" << url;
+        }
+
+        if (!url.isEmpty()) {
+            qDebug() << "Will download" << url << "to" << *path;
+            auto dl = Net::ApiRequest::makeFile(url, *path);
+            if (!result.version.hash.isEmpty()) {
+                switch (Hashing::algorithmFromString(result.version.hashType)) {
+                    case Hashing::Algorithm::Sha1:
+                        dl->addValidator(new Net::ChecksumValidator(QCryptographicHash::Sha1, result.version.hash));
+                        break;
+                    case Hashing::Algorithm::Md5:
+                        dl->addValidator(new Net::ChecksumValidator(QCryptographicHash::Md5, result.version.hash));
+                        break;
+                    default:
+                        break;
+                }
+            }
             m_filesJob->addNetAction(dl);
         }
     }

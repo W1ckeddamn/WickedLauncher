@@ -62,6 +62,7 @@
 #include "BuildConfig.h"
 #endif
 #include "net/ByteArraySink.h"
+#include "net/DownloadMirror.h"
 #include "net/FileSink.h"
 #include "net/Logging.h"
 #include "tasks/Task.h"
@@ -96,7 +97,8 @@ Request::Request(const QUrl& url, QByteArray postData, Options options)
     : Request(Spec{ .method = HttpMethod::Post, .url = url, .data = std::move(postData), .options = options })
 {}
 
-Request::Request(const Spec& spec) : m_options(spec.options), m_url(spec.url), m_httpMethod(spec.method), m_postData(spec.data)
+Request::Request(const Spec& spec)
+    : m_options(spec.options), m_url(spec.url), m_originalUrl(spec.url), m_httpMethod(spec.method), m_postData(spec.data)
 {
     connect(&m_retryTimer, &QTimer::timeout, this, &Request::executeTask);
 
@@ -119,6 +121,30 @@ void Request::addValidator(Validator* v)
 }
 
 void Request::executeTask()
+{
+    // Every attempt (including NetJob retries) starts over from the requested URL
+    m_url = m_originalUrl;
+    m_redirectCount = 0;
+    m_errorResponse.clear();
+    m_mirror.reset();
+
+    // Only content pinned by a checksum from official metadata may come from a file mirror; MCIM
+    // also takes unpinned mod platform API requests
+    const auto verb = m_httpMethod == HttpMethod::Get    ? DownloadMirror::Verb::Get
+                      : m_httpMethod == HttpMethod::Post ? DownloadMirror::Verb::Post
+                                                         : DownloadMirror::Verb::Other;
+    const bool pinned = m_sink && m_sink->hasContentPin();
+    const auto target = DownloadMirror::choose(m_originalUrl, DownloadMirror::currentConfig(), verb, pinned);
+    if (target && !(m_mirrorFailed && target->mayFallBack)) {
+        qCDebug(m_logCat) << getUid().toString() << "Using download mirror" << target->url.toString() << "for" << m_originalUrl.toString();
+        m_url = target->url;
+        m_mirror = *target;
+    }
+
+    sendRequest();
+}
+
+void Request::sendRequest()
 {
     setStatus(tr("Requesting %1").arg(StringUtils::truncateUrlHumanFriendly(m_url, 80)));
 
@@ -154,7 +180,9 @@ void Request::executeTask()
     }
 
 #ifdef LAUNCHER_APPLICATION
-    auto userAgent = APPLICATION->getUserAgent();
+    // MCIM admits launchers by the "<Name>/<version>" user agent they registered, so a custom one doesn't apply there
+    const bool onMcim = m_mirror && m_mirror->provider == DownloadMirror::Provider::Mcim;
+    auto userAgent = onMcim ? BuildConfig.USER_AGENT : APPLICATION->getUserAgent();
 #else
     auto userAgent = BuildConfig.USER_AGENT;
 #endif
@@ -218,6 +246,15 @@ void Request::onProgress(qint64 bytesReceived, qint64 bytesTotal)
 
 void Request::downloadError(QNetworkReply::NetworkError error)
 {
+    // Any mirror failure, a rate limit or a timeout included, goes straight to the original URL;
+    // user aborts never get here because abort() disconnects this slot first
+    if (mayFallBackFromMirror()) {
+        qCWarning(m_logCat) << getUid().toString() << "Download mirror failed for" << m_url.toString() << "with error" << error
+                            << "HTTP status:" << replyStatusCode();
+        m_state = State::Failed;
+        return;
+    }
+
     if (error == QNetworkReply::OperationCanceledError) {
         qCCritical(m_logCat) << getUid().toString() << "Aborted" << m_url.toString();
         m_state = State::Failed;
@@ -327,10 +364,12 @@ auto Request::handleRedirect() -> bool
     if (++m_redirectCount > 10) {
         qCWarning(m_logCat) << getUid().toString() << "Too many redirects for" << m_url.toString();
         m_sink->abort();
-        emitFailed(tr("Too many redirects"));
+        if (!tryMirrorFallback(tr("Too many redirects"))) {
+            emitFailed(tr("Too many redirects"));
+        }
         return true;
     }
-    executeTask();
+    sendRequest();
 
     return true;
 }
@@ -378,6 +417,9 @@ void Request::downloadFinished()
     }
     if (m_state == State::Failed) {
         qCDebug(m_logCat) << getUid().toString() << "Request failed in previous step:" << m_url.toString();
+        if (tryMirrorFallback(m_reply->errorString())) {
+            return;
+        }
         m_sink->abort();
         m_failReason = m_reply->errorString();
         emit failed(m_reply->errorString());
@@ -399,6 +441,9 @@ void Request::downloadFinished()
         auto result = m_sink->write(data);
         if (!result) {
             qCDebug(m_logCat) << getUid().toString() << "Request failed to write:" << m_url.toString();
+            if (tryMirrorFallback(result.error())) {
+                return;
+            }
             m_sink->abort();
             emitFailed(result.error());
             return;
@@ -409,11 +454,17 @@ void Request::downloadFinished()
     auto result = m_sink->finalize(*m_reply);
     if (!result) {
         qCDebug(m_logCat) << getUid().toString() << "Request failed to finalize:" << m_url.toString();
+        if (tryMirrorFallback(result.error())) {
+            return;
+        }
         m_sink->abort();
         emitFailed(result.error());
         return;
     }
 
+    if (m_mirror) {
+        DownloadMirror::reportSuccess(m_mirror->provider);
+    }
     qCDebug(m_logCat) << getUid().toString() << "Request succeeded:" << m_url.toString();
     emitSucceeded();
 }
@@ -435,6 +486,42 @@ void Request::downloadReadyRead()
     } else {
         qCCritical(m_logCat) << getUid().toString() << "Cannot write download data! illegal status" << m_status;
     }
+}
+
+bool Request::mayFallBackFromMirror() const
+{
+    return m_mirror && m_mirror->mayFallBack;
+}
+
+bool Request::tryMirrorFallback(const QString& reason)
+{
+    if (!mayFallBackFromMirror()) {
+        return false;
+    }
+
+    qCWarning(m_logCat) << getUid().toString() << "Download mirror failed for" << m_originalUrl.toString() << "(" << reason
+                        << "), retrying the original URL";
+    if (replyStatusCode() != 404) {
+        DownloadMirror::reportFailure(m_mirror->provider);
+    }
+
+    // Discard the mirror's partial output; the sink starts over on the next init()
+    m_sink->abort();
+    m_mirrorFailed = true;
+    m_mirror.reset();
+    m_state = State::Running;
+
+    // This runs inside the old reply's finished signal, so let Qt delete it afterwards
+    if (m_reply) {
+        m_reply->disconnect(this);
+        m_reply.release()->deleteLater();
+    }
+
+    m_url = m_originalUrl;
+    m_redirectCount = 0;
+    m_errorResponse.clear();
+    sendRequest();
+    return true;
 }
 
 auto Request::abort() -> bool

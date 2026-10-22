@@ -139,6 +139,8 @@ set(NET_SOURCES
     net/ApiRequest.h
     net/Request.cpp
     net/Request.h
+    net/DownloadMirror.cpp
+    net/DownloadMirror.h
     net/RPCSink.h
 )
 
@@ -651,6 +653,8 @@ set(PRISMUPDATER_SOURCES
     net/Logging.cpp
     net/Request.cpp
     net/Request.h
+    net/DownloadMirror.cpp
+    net/DownloadMirror.h
     net/NetJob.cpp
     net/NetJob.h
     net/NetUtils.h
@@ -863,6 +867,7 @@ SET(LAUNCHER_SOURCES
     ui/setupwizard/AutoJavaWizardPage.h
     ui/setupwizard/LoginWizardPage.cpp
     ui/setupwizard/LoginWizardPage.h
+    ui/setupwizard/MirrorWizardPage.h
 
     # GUI - themes
     ui/themes/FusionTheme.cpp
@@ -1163,6 +1168,8 @@ SET(LAUNCHER_SOURCES
     ui/widgets/MinecraftSettingsWidget.cpp
     ui/widgets/JavaSettingsWidget.h
     ui/widgets/JavaSettingsWidget.cpp
+    ui/widgets/MirrorSettingsWidget.h
+    ui/widgets/MirrorSettingsWidget.cpp
 
     # GUI - instance group view
     ui/instanceview/InstanceProxyModel.cpp

@@ -197,6 +197,9 @@
         </widget>
        </item>
        <item>
+        <widget class="MirrorSettingsWidget" name="mirrorSettings"/>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_ua">
          <property name="minimumSize">
           <size>
@@ -458,6 +461,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MirrorSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>ui/widgets/MirrorSettingsWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

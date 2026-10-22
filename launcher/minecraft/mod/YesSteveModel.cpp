@@ -16,7 +16,7 @@ void YesSteveModel::readMetadata()
     if (m_type != ResourceType::SINGLEFILE && m_type != ResourceType::ZIPFILE) {
         return;
     }
-    QFile file(m_file_info.absoluteFilePath());
+    QFile file(m_fileInfo.absoluteFilePath());
     if (!file.open(QIODevice::ReadOnly)) {
         return;
     }

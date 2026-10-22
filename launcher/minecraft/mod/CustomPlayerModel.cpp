@@ -16,16 +16,16 @@ void CustomPlayerModel::readMetadata()
 {
     QByteArray data;
     if (m_type == ResourceType::FOLDER) {
-        QFile file(m_file_info.absoluteDir().filePath(m_file_info.fileName() + "/model.json"));
+        QFile file(m_fileInfo.absoluteDir().filePath(m_fileInfo.fileName() + "/model.json"));
         if (file.open(QIODevice::ReadOnly)) {
             data = file.readAll();
         }
     } else {
         // Zip
-        MMCZip::ArchiveReader reader(m_file_info.absoluteFilePath());
-        auto file = reader.goToFile("model.json");
-        if (file) {
-            data = file->readAll();
+        MMCZip::ArchiveReader reader(m_fileInfo.absoluteFilePath());
+        auto res = reader.readFile("model.json");
+        if (res.has_value()) {
+            data = res.value();
         }
     }
 
@@ -33,24 +33,30 @@ void CustomPlayerModel::readMetadata()
         return;
     }
 
-    try {
-        auto doc = Json::requireDocument(data);
-        auto obj = Json::requireObject(doc);
-        
-        if (obj.contains("modelName"))
-            m_name = Json::requireString(obj, "modelName");
-        else
-            m_name = m_file_info.completeBaseName();
-        if (obj.contains("version"))
-            m_version = Json::requireString(obj, "version");
-        else
-            m_version = "";
-        if (obj.contains("author"))
-            m_author = Json::requireString(obj, "author");
-        else
-            m_author = "";
-
-    } catch (const Json::JsonException& e) {
-        qWarning() << "Failed to parse model.json for" << m_file_info.fileName() << ":" << e.what();
+    auto docRes = Json::requireDocument(data);
+    if (!docRes.has_value()) {
+        return;
     }
+
+    auto objRes = Json::requireObject(docRes.value());
+    if (!objRes.has_value()) {
+        return;
+    }
+
+    const auto& obj = objRes.value();
+
+    if (obj.contains("modelName") && obj.value("modelName").isString())
+        m_name = obj.value("modelName").toString();
+    else
+        m_name = m_fileInfo.completeBaseName();
+
+    if (obj.contains("version") && obj.value("version").isString())
+        m_version = obj.value("version").toString();
+    else
+        m_version = "";
+
+    if (obj.contains("author") && obj.value("author").isString())
+        m_author = obj.value("author").toString();
+    else
+        m_author = "";
 }

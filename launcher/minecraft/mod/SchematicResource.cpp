@@ -81,7 +81,7 @@ QString SchematicResource::dimensionsString() const
 
 void SchematicResource::parseMetadata()
 {
-    auto fname = m_file_info.fileName().toLower();
+    auto fname = m_fileInfo.fileName().toLower();
     if (fname.endsWith(".schematic"))
         m_format = SchematicFormat::Schematic;
     else if (fname.endsWith(".schem"))
@@ -108,7 +108,7 @@ void SchematicResource::parseMetadata()
 
 void SchematicResource::parseSchematicNBT()
 {
-    auto root = readRootCompoundAuto(m_file_info.absoluteFilePath());
+    auto root = readRootCompoundAuto(m_fileInfo.absoluteFilePath());
     if (!root) return;
     try {
         if (root->has_key("Width"))
@@ -125,7 +125,7 @@ void SchematicResource::parseSchematicNBT()
 
 void SchematicResource::parseSchemNBT()
 {
-    auto root = readRootCompoundAuto(m_file_info.absoluteFilePath());
+    auto root = readRootCompoundAuto(m_fileInfo.absoluteFilePath());
     if (!root) return;
     try {
         if (root->has_key("DataVersion"))
@@ -159,7 +159,7 @@ void SchematicResource::parseSchemNBT()
 
 void SchematicResource::parseLitematicNBT()
 {
-    auto root = readRootCompoundAuto(m_file_info.absoluteFilePath());
+    auto root = readRootCompoundAuto(m_fileInfo.absoluteFilePath());
     if (!root) return;
     try {
         if (root->has_key("Metadata") && root->has_key("Metadata", nbt::tag_type::Compound)) {

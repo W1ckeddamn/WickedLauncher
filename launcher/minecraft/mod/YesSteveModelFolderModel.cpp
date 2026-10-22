@@ -8,10 +8,10 @@
 YesSteveModelFolderModel::YesSteveModelFolderModel(const QDir& dir, MinecraftInstance* instance, QObject* parent)
     : ResourceFolderModel(dir, instance, false, true, parent)
 {
-    m_column_names = QStringList({ tr("Name"), tr("Author"), tr("Last Modified"), tr("Size") });
-    m_column_names_translated = QStringList({ tr("Name"), tr("Author"), tr("Last Modified"), tr("Size") });
-    m_column_sort_keys = { SortType::NAME, SortType::NAME, SortType::DATE, SortType::SIZE };
-    m_column_resize_modes = { QHeaderView::Stretch, QHeaderView::ResizeToContents, QHeaderView::Interactive, QHeaderView::Interactive };
+    m_columnNames = QStringList({ "Name", "Author", "Last Modified", "Size" });
+    m_columnNamesTranslated = QStringList({ tr("Name"), tr("Author"), tr("Last Modified"), tr("Size") });
+    m_columnSortKeys = { SortType::Name, SortType::Name, SortType::Date, SortType::Size };
+    m_columnResizeModes = { QHeaderView::Stretch, QHeaderView::ResizeToContents, QHeaderView::Interactive, QHeaderView::Interactive };
     m_columnsHideable = { false, false, true, true };
 }
 
@@ -22,7 +22,7 @@ QVariant YesSteveModelFolderModel::data(const QModelIndex& index, int role) cons
 
     int row = index.row();
     int column = index.column();
-    auto resource = qobject_cast<YesSteveModel*>(m_resources[row].data());
+    auto* resource = dynamic_cast<YesSteveModel*>(m_resources[row].get());
     if(!resource) return {};
 
     switch (role) {
@@ -48,7 +48,7 @@ QVariant YesSteveModelFolderModel::data(const QModelIndex& index, int role) cons
         }
         case Qt::ToolTipRole: {
             if (column == NameColumn) {
-                return resource->internal_id();
+                return resource->internalId();
             }
             return {};
         }
@@ -60,8 +60,8 @@ QVariant YesSteveModelFolderModel::data(const QModelIndex& index, int role) cons
 QVariant YesSteveModelFolderModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        if (section >= 0 && section < m_column_names_translated.size())
-            return m_column_names_translated[section];
+        if (section >= 0 && section < m_columnNamesTranslated.size())
+            return m_columnNamesTranslated[section];
     }
     return ResourceFolderModel::headerData(section, orientation, role);
 }

@@ -53,8 +53,8 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionAddMicrosoft"/>
-   <addaction name="actionAddAuthlibInjector"/>
    <addaction name="actionAddOffline"/>
+   <addaction name="actionAddAuthlibInjector"/>
    <addaction name="actionRefresh"/>
    <addaction name="actionRemove"/>
    <addaction name="actionSetDefault"/>
@@ -90,14 +90,17 @@
     <string>&amp;Add Microsoft</string>
    </property>
   </action>
-  <action name="actionAddAuthlibInjector">
-   <property name="text">
-    <string>Add Authlib-&amp;Injector</string>
-   </property>
-  </action>
   <action name="actionAddOffline">
    <property name="text">
     <string>Add &amp;Offline</string>
+   </property>
+  </action>
+  <action name="actionAddAuthlibInjector">
+   <property name="text">
+    <string>Add authlib-&amp;injector</string>
+   </property>
+   <property name="toolTip">
+    <string>Add an account from a third-party authentication server such as Ely.by or LittleSkin</string>
    </property>
   </action>
   <action name="actionRefresh">

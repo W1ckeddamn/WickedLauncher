@@ -38,9 +38,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QRegularExpression>
+#include <QUrl>
 #include <QUuid>
-#include "BuildConfig.h"
+
+#include "Yggdrasil.h"
 
 namespace {
 void tokenToJSONV3(QJsonObject& parent, const Token& t, const char* tokenName)
@@ -121,6 +122,9 @@ void profileToJSONV3(QJsonObject& parent, MinecraftProfile p, const char* tokenN
     if (!p.currentCape.isEmpty()) {
         out["cape"] = p.currentCape;
     }
+    if (!p.canUploadSkins) {
+        out["canUploadSkins"] = false;
+    }
 
     {
         QJsonObject skinObj;
@@ -164,6 +168,7 @@ MinecraftProfile profileFromJSONV3(const QJsonObject& parent, const char* tokenN
         }
         out.name = nameV.toString();
         out.id = idV.toString();
+        out.canUploadSkins = tokenObject.value("canUploadSkins").toBool(true);
     }
 
     {
@@ -291,30 +296,31 @@ bool AccountData::resumeStateFromV3(QJsonObject data)
     auto typeS = typeV.toString();
     if (typeS == "MSA") {
         type = AccountType::MSA;
-    } else if (typeS == "AuthlibInjector" || typeS == "Elyby") {
-        type = AccountType::AuthlibInjector;
     } else if (typeS == "Offline") {
         type = AccountType::Offline;
+    } else if (typeS == "AuthlibInjector") {
+        type = AccountType::AuthlibInjector;
+    } else if (typeS == "Elyby") {
+        // Fjord Launcher's legacy Ely.by accounts
+        type = AccountType::AuthlibInjector;
+        authlibInjectorUrl = Yggdrasil::ELYBY_API_ROOT;
     } else {
         qWarning() << "Failed to parse account data: type is not recognized.";
         return false;
     }
 
-    if (type == AccountType::AuthlibInjector) {
-        if (typeS == "Elyby") {
-            customAuthServerUrl = "https://authserver.ely.by/api/authlib-injector/authserver";
-            customAccountServerUrl = "https://authserver.ely.by/api/authlib-injector/api";
-            customSessionServerUrl = "https://authserver.ely.by/api/authlib-injector/sessionserver";
-            customServicesServerUrl = "https://authserver.ely.by/api/authlib-injector/minecraftservices";
-            customAuthlibInjectorUrl = "https://authserver.ely.by/api/authlib-injector";
-            authlibInjectorMetadata = "";
-        } else {
-            customAuthServerUrl = data.value("customAuthServerUrl").toString();
-            customAccountServerUrl = data.value("customAccountServerUrl").toString();
-            customSessionServerUrl = data.value("customSessionServerUrl").toString();
-            customServicesServerUrl = data.value("customServicesServerUrl").toString();
-            customAuthlibInjectorUrl = data.value("authlibInjectorUrl").toString();
-            authlibInjectorMetadata = data.value("authlibInjectorMetadata").toString();
+    if (type == AccountType::AuthlibInjector && typeS != "Elyby") {
+        authlibInjectorUrl = data.value("authlibInjectorUrl").toString();
+        authlibInjectorMetadata = data.value("authlibInjectorMetadata").toString();
+
+        // Fjord Launcher stores the endpoints rather than the root; recover it from the auth server
+        const auto legacyAuthServer = data.value("customAuthServerUrl").toString();
+        if (authlibInjectorUrl.isEmpty() && legacyAuthServer.endsWith("/authserver")) {
+            authlibInjectorUrl = legacyAuthServer.chopped(QString("/authserver").size());
+        }
+        if (authlibInjectorUrl.isEmpty()) {
+            qWarning() << "Failed to parse account data: authlib-injector account has no server.";
+            return false;
         }
     }
 
@@ -359,12 +365,14 @@ QJsonObject AccountData::saveState() const
         output["type"] = "Offline";
     } else if (type == AccountType::AuthlibInjector) {
         output["type"] = "AuthlibInjector";
-        output["customAuthServerUrl"] = customAuthServerUrl;
-        output["customAccountServerUrl"] = customAccountServerUrl;
-        output["customSessionServerUrl"] = customSessionServerUrl;
-        output["customServicesServerUrl"] = customServicesServerUrl;
-        output["authlibInjectorUrl"] = customAuthlibInjectorUrl;
+        output["authlibInjectorUrl"] = authlibInjectorUrl;
         output["authlibInjectorMetadata"] = authlibInjectorMetadata;
+
+        // Written so the accounts file stays loadable by Fjord Launcher
+        output["customAuthServerUrl"] = authServerUrl();
+        output["customAccountServerUrl"] = accountServerUrl();
+        output["customSessionServerUrl"] = sessionServerUrl();
+        output["customServicesServerUrl"] = servicesServerUrl();
     }
 
     tokenToJSONV3(output, yggdrasilToken, "ygg");
@@ -397,111 +405,54 @@ QString AccountData::lastError() const
     return errorString;
 }
 
-bool AccountData::usesCustomApiServers() const
-{
-    return type == AccountType::AuthlibInjector;
-}
-
-bool AccountData::canUploadSkins() const
-{
-    return minecraftProfile.canUploadSkins;
-}
-
 QString AccountData::authServerUrl() const
 {
-    if (usesCustomApiServers() && !customAuthServerUrl.isEmpty()) {
-        return customAuthServerUrl;
-    }
-    return QStringLiteral("https://authserver.mojang.com");
-}
-
-QString AccountData::accountServerUrl() const
-{
-    if (usesCustomApiServers() && !customAccountServerUrl.isEmpty()) {
-        return customAccountServerUrl;
-    }
-    return QStringLiteral("https://api.mojang.com");
+    return authlibInjectorUrl + "/authserver";
 }
 
 QString AccountData::sessionServerUrl() const
 {
-    if (usesCustomApiServers() && !customSessionServerUrl.isEmpty()) {
-        return customSessionServerUrl;
-    }
-    return QStringLiteral("https://sessionserver.mojang.com");
+    return authlibInjectorUrl + "/sessionserver";
+}
+
+QString AccountData::accountServerUrl() const
+{
+    return authlibInjectorUrl + "/api";
 }
 
 QString AccountData::servicesServerUrl() const
 {
-    if (usesCustomApiServers() && !customServicesServerUrl.isEmpty()) {
-        return customServicesServerUrl;
-    }
-    return QStringLiteral("https://api.minecraftservices.com");
-}
-
-QString AccountData::authlibInjectorUrl() const
-{
-    if (usesCustomApiServers()) {
-        return customAuthlibInjectorUrl;
-    }
-    return QString();
+    return authlibInjectorUrl + "/minecraftservices";
 }
 
 QString AccountData::userName() const
 {
-    if (type == AccountType::MSA) {
-        return QString();
-    }
-    return yggdrasilToken.extra["userName"].toString();
+    return yggdrasilToken.extra.value("userName").toString();
 }
 
 QString AccountData::clientToken() const
 {
-    if (type != AccountType::AuthlibInjector) {
-        return QString();
-    }
-    return yggdrasilToken.extra["clientToken"].toString();
+    return yggdrasilToken.extra.value("clientToken").toString();
 }
 
-void AccountData::setClientToken(QString clientToken)
+void AccountData::generateClientToken()
+{
+    yggdrasilToken.extra["clientToken"] = QUuid::createUuid().toString(QUuid::Id128);
+}
+
+bool AccountData::supportsSkinUpload() const
 {
     if (type != AccountType::AuthlibInjector) {
-        return;
+        return type == AccountType::MSA;
     }
-    yggdrasilToken.extra["clientToken"] = clientToken;
+    return minecraftProfile.canUploadSkins && QUrl(authlibInjectorUrl).host() != QUrl(Yggdrasil::ELYBY_API_ROOT).host();
 }
 
-void AccountData::generateClientTokenIfMissing()
+QString AccountData::serverName() const
 {
-    if (yggdrasilToken.extra.contains("clientToken")) {
-        return;
+    const auto name = Yggdrasil::serverNameFromMetadata(authlibInjectorMetadata);
+    if (!name.isEmpty()) {
+        return name;
     }
-    invalidateClientToken();
-}
-
-void AccountData::invalidateClientToken()
-{
-    if (type != AccountType::AuthlibInjector) {
-        return;
-    }
-    yggdrasilToken.extra["clientToken"] = QUuid::createUuid().toString().remove(QRegularExpression("[{-}]"));
-}
-
-QString AccountData::accountDisplayString() const
-{
-    switch (type) {
-        case AccountType::AuthlibInjector: {
-            return userName();
-        }
-        case AccountType::Offline: {
-            return QObject::tr("<Offline>");
-        }
-        case AccountType::MSA: {
-            if (minecraftProfile.name.isEmpty()) {
-                return QObject::tr("<Unknown>");
-            }
-            return minecraftProfile.name;
-        }
-    }
-    return QString();
+    return QUrl(authlibInjectorUrl).host();
 }

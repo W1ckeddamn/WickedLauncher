@@ -1,54 +1,55 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
 #pragma once
 
 #include <QDialog>
-#include <QMimeData>
-#include <QUrl>
-#include <memory>
 
-#include "GetAuthlibInjectorApiLocation.h"
+#include "minecraft/auth/AuthFlow.h"
 #include "minecraft/auth/MinecraftAccount.h"
-#include "tasks/Task.h"
+#include "minecraft/auth/YggdrasilServerResolveTask.h"
 
 namespace Ui {
 class AuthlibInjectorLoginDialog;
 }
 
+//! Logs in to a Yggdrasil-compatible server (Ely.by, LittleSkin, Drasl, ...) used through authlib-injector
 class AuthlibInjectorLoginDialog : public QDialog {
     Q_OBJECT
 
    public:
-    ~AuthlibInjectorLoginDialog();
+    ~AuthlibInjectorLoginDialog() override;
 
-    static MinecraftAccountPtr newAccount(QWidget* parent, const QString& message);
+    /** Shows the dialog and returns the logged in account, or nullptr if cancelled. With `reauth`,
+     *  the server and username of that account are filled in. */
+    static MinecraftAccountPtr newAccount(QWidget* parent, const QString& message, const MinecraftAccountPtr& reauth = nullptr);
+
+   protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+   private slots:
+    void accept() override;
+    void reject() override;
+
+    void onPresetChanged(int index);
+    void updateAcceptAllowed();
+
+    void onServerResolved();
+    void onLoginSucceeded();
+    void onFailed(const QString& reason);
+    void onSelectProfile(const QStringList& names, int* chosenIndex);
+    void onTwoFactorRequired();
 
    private:
     explicit AuthlibInjectorLoginDialog(QWidget* parent = nullptr);
 
-    void setUserInputsEnabled(bool enable);
-
-   protected slots:
-    void accept() override;
-
-    void onApiLocationTaskSucceeded();
-    void onApiLocationTaskFailed(const QString& reason);
-    void onTaskFailed(const QString& reason);
-    void onTaskSucceeded();
-    void onTaskStatus(const QString& status);
-
-    void on_userTextBox_textEdited(const QString& newText);
-    void on_passTextBox_textEdited(const QString& newText);
-    void on_authlibInjectorTextBox_textEdited(const QString& newText);
-
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
+    void setBusy(bool busy);
+    void showStatus(const QString& text, bool isError);
 
    private:
-    QString fixUrl(const QString& url);
-    QUrl extractAuthlibInjectorUrl(const QMimeData* mimeData);
+    Ui::AuthlibInjectorLoginDialog* ui;
 
-    std::unique_ptr<Ui::AuthlibInjectorLoginDialog> ui;
+    shared_qobject_ptr<YggdrasilServerResolveTask> m_resolveTask;
+    shared_qobject_ptr<AuthFlow> m_loginTask;
     MinecraftAccountPtr m_account;
-    Task::Ptr m_loginTask;
-    Task::Ptr m_apiLocationTask;
-    GetAuthlibInjectorApiLocation::Ptr m_apiLocationRequest;
 };

@@ -1,26 +1,18 @@
 #include "AuthlibInjectorMetadataStep.h"
 
-#include <QJsonDocument>
-#include <QNetworkRequest>
 #include "Application.h"
+#include "minecraft/auth/Yggdrasil.h"
 
 AuthlibInjectorMetadataStep::AuthlibInjectorMetadataStep(AccountData* data) : AuthStep(data) {}
 
 QString AuthlibInjectorMetadataStep::describe()
 {
-    return tr("Prefetching authlib-injector metadata.");
+    return tr("Fetching authentication server metadata.");
 }
 
 void AuthlibInjectorMetadataStep::perform()
 {
-    if (m_data->customAuthlibInjectorUrl.isEmpty()) {
-        emit finished(AccountTaskState::STATE_WORKING, tr("Account has no authlib-injector URL."));
-        return;
-    }
-
-    QUrl url{ m_data->customAuthlibInjectorUrl };
-
-    auto [request, response] = Net::Request::makeByteArray(url);
+    auto [request, response] = Net::Request::makeByteArray(QUrl(m_data->authlibInjectorUrl));
     m_request = request;
 
     m_task.reset(new NetJob("AuthlibInjectorMetadataStep", APPLICATION->network()));
@@ -34,14 +26,13 @@ void AuthlibInjectorMetadataStep::perform()
 
 void AuthlibInjectorMetadataStep::onRequestDone(QByteArray* response)
 {
-    if (m_request->error() == QNetworkReply::NoError && response && response->size() > 0) {
-        QJsonParseError jsonError;
-        QJsonDocument doc = QJsonDocument::fromJson(*response, &jsonError);
-        if (jsonError.error == QJsonParseError::NoError) {
-            m_data->authlibInjectorMetadata = response->toBase64();
-            emit finished(AccountTaskState::STATE_WORKING, tr("Got authlib-injector metadata."));
-            return;
-        }
+    if (m_request->error() != QNetworkReply::NoError || !Yggdrasil::isMetadata(*response)) {
+        qWarning() << "Could not refresh metadata from" << m_data->authlibInjectorUrl << "-" << m_request->errorString()
+                   << "- keeping the stored copy";
+        emit finished(AccountTaskState::STATE_WORKING, tr("Kept the stored server metadata"));
+        return;
     }
-    emit finished(AccountTaskState::STATE_WORKING, tr("Couldn't get authlib-injector metadata, continuing anyway."));
+
+    m_data->authlibInjectorMetadata = QString::fromLatin1(response->toBase64());
+    emit finished(AccountTaskState::STATE_WORKING, tr("Got server metadata"));
 }

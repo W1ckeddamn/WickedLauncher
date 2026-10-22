@@ -290,9 +290,16 @@ Result<> parseMinecraftProfileMojang(const QByteArray& data, MinecraftProfile& o
 
     auto propsArray = obj.value("properties").toArray();
     QByteArray texturePayload;
+    output.canUploadSkins = true;
     for (auto p : propsArray) {
         auto pObj = p.toObject();
         auto name = pObj.value("name");
+
+        // Yggdrasil servers list the texture types players may upload, e.g. "skin,cape"
+        if (name.toString() == "uploadableTextures") {
+            output.canUploadSkins = pObj.value("value").toString().split(',').contains("skin");
+            continue;
+        }
         if (!name.isString() || name.toString() != "textures") {
             continue;
         }
@@ -307,13 +314,6 @@ Result<> parseMinecraftProfileMojang(const QByteArray& data, MinecraftProfile& o
         }
     }
 
-    if (texturePayload.isNull()) {
-        return std::unexpected("No texture payload data");
-    }
-
-    TRY_INTO(obj, Json::requireObject(texturePayload, "session texture payload"))
-    TRY_INTO(auto tObj, Json::requireObject(obj, "textures"))
-
     Skin skinOut;
     // fill in default skin info ourselves, as this endpoint doesn't provide it
     bool steve = isDefaultModelSteve(output.id);
@@ -322,6 +322,20 @@ Result<> parseMinecraftProfileMojang(const QByteArray& data, MinecraftProfile& o
     // sadly we can't figure this out, but I don't think it really matters...
     skinOut.id = "00000000-0000-0000-0000-000000000000";
     Cape capeOut;
+
+    // Yggdrasil servers omit the textures property for players without a skin; they get the default
+    if (texturePayload.isNull()) {
+        qDebug() << "No texture payload data, using the default skin";
+        output.skin = skinOut;
+        output.capes.clear();
+        output.currentCape.clear();
+        output.validity = Validity::Certain;
+        return {};
+    }
+
+    TRY_INTO(obj, Json::requireObject(texturePayload, "session texture payload"))
+    TRY_INTO(auto tObj, Json::requireObject(obj, "textures"))
+
     for (auto idx = tObj.constBegin(); idx != tObj.constEnd(); ++idx) {
         if (idx->isObject()) {
             if (idx.key() == "SKIN") {

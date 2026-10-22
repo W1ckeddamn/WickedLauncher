@@ -82,40 +82,23 @@ struct MinecraftEntitlement {
 struct MinecraftProfile {
     QString id;
     QString name;
-    bool canUploadSkins = true;
     Skin skin;
     QString currentCape;
     QMap<QString, Cape> capes;
+    // Yggdrasil servers may list what can be uploaded in the "uploadableTextures" profile property;
+    // most (Drasl, LittleSkin, Ely.by) don't send it, so absence means allowed
+    bool canUploadSkins = true;
     Validity validity = Validity::None;
 };
 
-enum class AccountType { MSA, AuthlibInjector, Offline };
+// AuthlibInjector: any Yggdrasil-compatible server (Ely.by, LittleSkin, Drasl, ...) used through authlib-injector
+enum class AccountType { MSA, Offline, AuthlibInjector };
 
 enum class AccountState { Unchecked, Offline, Working, Online, Disabled, Errored, Expired, Gone };
 
 struct AccountData {
     QJsonObject saveState() const;
     bool resumeStateFromV3(QJsonObject data);
-
-    bool canUploadSkins() const;
-    bool usesCustomApiServers() const;
-    QString authServerUrl() const;
-    QString accountServerUrl() const;
-    QString sessionServerUrl() const;
-    QString servicesServerUrl() const;
-    QString authlibInjectorUrl() const;
-
-    //! userName for authlib-injector accounts, gamertag for MSA
-    QString accountDisplayString() const;
-
-    //! Only valid for authlib-injector accounts. MSA does not preserve this information
-    QString userName() const;
-
-    //! Only valid for authlib-injector accounts.
-    QString clientToken() const;
-    void setClientToken(QString clientToken);
-    void invalidateClientToken();
-    void generateClientTokenIfMissing();
 
     //! Yggdrasil access token, as passed to the game.
     QString accessToken() const;
@@ -125,13 +108,28 @@ struct AccountData {
 
     QString lastError() const;
 
+    // AuthlibInjector endpoints, all derived from the API root (authlibInjectorUrl)
+    QString authServerUrl() const;
+    QString sessionServerUrl() const;
+    QString accountServerUrl() const;
+    QString servicesServerUrl() const;
+
+    //! Login name (username or e-mail) used against the Yggdrasil server
+    QString userName() const;
+    QString clientToken() const;
+    void generateClientToken();
+
+    //! Human readable server name from the metadata, falling back to the API root's host
+    QString serverName() const;
+
+    //! Whether skins can be changed through the server's texture API (Ely.by has none)
+    bool supportsSkinUpload() const;
+
     AccountType type = AccountType::MSA;
 
-    QString customAuthServerUrl;
-    QString customAccountServerUrl;
-    QString customSessionServerUrl;
-    QString customServicesServerUrl;
-    QString customAuthlibInjectorUrl;
+    // AuthlibInjector only: the API root after X-Authlib-Injector-API-Location resolution, and the
+    // base64 of its metadata document, handed to the game as authlibinjector.yggdrasil.prefetched
+    QString authlibInjectorUrl;
     QString authlibInjectorMetadata;
 
     QString msaClientID;

@@ -44,10 +44,10 @@
 
 #include <QDebug>
 
+#include "ui/dialogs/AuthlibInjectorLoginDialog.h"
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
-#include "ui/dialogs/AuthlibInjectorLoginDialog.h"
 
 #include "Application.h"
 
@@ -139,12 +139,9 @@ void AccountListPage::on_actionAddMicrosoft_triggered()
     }
 }
 
-void AccountListPage::on_actionAddAuthlibInjector_triggered()
+void AccountListPage::on_actionAddOffline_triggered()
 {
-    MinecraftAccountPtr account = AuthlibInjectorLoginDialog::newAccount(
-        this, tr("Please enter your username, password, and the URL of your authentication server.<br><br>"
-                 "<b>Caution!</b> Your username and password will be sent to the specified server!"));
-
+    const auto account = ChooseOfflineNameDialog::newAccount(this, tr("Please enter your desired username to add your offline account."));
     if (account) {
         m_accounts->addAccount(account);
         if (m_accounts->count() == 1) {
@@ -153,15 +150,10 @@ void AccountListPage::on_actionAddAuthlibInjector_triggered()
     }
 }
 
-void AccountListPage::on_actionAddOffline_triggered()
+void AccountListPage::on_actionAddAuthlibInjector_triggered()
 {
-    ChooseOfflineNameDialog dialog(tr("Please enter your desired username to add your offline account."), this);
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    if (const MinecraftAccountPtr account = MinecraftAccount::createOffline(dialog.getUsername())) {
-        account->login()->start();  // The task will complete here.
+    auto account = AuthlibInjectorLoginDialog::newAccount(this, tr("Log in with an account from an authlib-injector compatible server."));
+    if (account) {
         m_accounts->addAccount(account);
         if (m_accounts->count() == 1) {
             m_accounts->setDefaultAccount(account);
@@ -216,6 +208,7 @@ void AccountListPage::updateButtonStates()
     bool hasSelection = !selection.empty();
     bool accountIsReady = false;
     bool accountIsOnline = false;
+    bool accountCanManageSkins = false;
     bool accountCanMoveUp = false;
     bool accountCanMoveDown = false;
     if (hasSelection) {
@@ -223,6 +216,7 @@ void AccountListPage::updateButtonStates()
         MinecraftAccountPtr account = selected.data(AccountList::PointerRole).value<MinecraftAccountPtr>();
         accountIsReady = !account->isActive();
         accountIsOnline = account->accountType() != AccountType::Offline;
+        accountCanManageSkins = account->accountData()->supportsSkinUpload();
 
         accountCanMoveUp = selected.row() > 0;
         int indexOfLast = m_accounts->count() - 1;
@@ -230,7 +224,7 @@ void AccountListPage::updateButtonStates()
     }
     ui->actionRemove->setEnabled(accountIsReady);
     ui->actionSetDefault->setEnabled(accountIsReady);
-    ui->actionManageSkins->setEnabled(accountIsReady && accountIsOnline);
+    ui->actionManageSkins->setEnabled(accountIsReady && accountCanManageSkins);
     ui->actionRefresh->setEnabled(accountIsReady && accountIsOnline);
 
     if (m_accounts->defaultAccount().get() == nullptr) {

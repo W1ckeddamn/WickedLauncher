@@ -43,6 +43,8 @@
 #include <QPixmap>
 #include <QString>
 
+#include <optional>
+
 #include "AccountData.h"
 #include "AuthSession.h"
 #include "QObjectPtr.h"
@@ -87,7 +89,9 @@ class MinecraftAccount : public QObject, public Usable {
 
     static MinecraftAccountPtr createOffline(const QString& username);
 
-    static MinecraftAccountPtr createFromUsernameAuthlibInjector(const QString& username, const QString& authlibInjectorUrl);
+    /** A not yet logged in account on the Yggdrasil server at `apiRoot` (already resolved through
+     *  X-Authlib-Injector-API-Location), whose metadata document is `metadata`. */
+    static MinecraftAccountPtr createAuthlibInjector(const QString& username, const QString& apiRoot, const QByteArray& metadata);
 
     static MinecraftAccountPtr loadFromJsonV3(const QJsonObject& json);
 
@@ -97,7 +101,8 @@ class MinecraftAccount : public QObject, public Usable {
     QJsonObject saveToJson() const;
 
    public: /* manipulation */
-    shared_qobject_ptr<AuthFlow> login(bool useDeviceCode = false, const std::optional<QString>& password = std::nullopt);
+    //! `password` is required for, and only used by, AuthlibInjector accounts
+    shared_qobject_ptr<AuthFlow> login(bool useDeviceCode = false, std::optional<QString> password = std::nullopt);
 
     shared_qobject_ptr<AuthFlow> refresh();
 
@@ -118,12 +123,9 @@ class MinecraftAccount : public QObject, public Usable {
 
     AccountType accountType() const noexcept { return data.type; }
 
-    bool ownsMinecraft() const { return data.type == AccountType::Offline || data.type == AccountType::AuthlibInjector || data.minecraftEntitlement.ownsMinecraft; }
+    bool ownsMinecraft() const { return true; }
 
     bool hasProfile() const { return data.profileId().size() != 0; }
-
-    bool canUploadSkins() const { return data.canUploadSkins(); }
-    bool usesCustomApiServers() const { return data.usesCustomApiServers(); }
 
     QString typeString() const
     {
@@ -131,11 +133,13 @@ class MinecraftAccount : public QObject, public Usable {
             case AccountType::MSA: {
                 return "msa";
             } break;
-            case AccountType::AuthlibInjector: {
-                return "authlib-injector";
-            } break;
             case AccountType::Offline: {
                 return "offline";
+            } break;
+            case AccountType::AuthlibInjector: {
+                // "mojang" would disable profile keys, which breaks chat on servers that
+                // enforce secure profiles (1.19.3+)
+                return "msa";
             } break;
             default: {
                 return "unknown";

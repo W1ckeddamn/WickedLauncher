@@ -218,6 +218,10 @@ set(MINECRAFT_SOURCES
     minecraft/auth/MinecraftAccount.h
     minecraft/auth/Parsers.cpp
     minecraft/auth/Parsers.h
+    minecraft/auth/Yggdrasil.cpp
+    minecraft/auth/Yggdrasil.h
+    minecraft/auth/YggdrasilServerResolveTask.cpp
+    minecraft/auth/YggdrasilServerResolveTask.h
 
     minecraft/auth/AuthFlow.cpp
     minecraft/auth/AuthFlow.h
@@ -238,12 +242,12 @@ set(MINECRAFT_SOURCES
     minecraft/auth/steps/XboxAuthorizationStep.h
     minecraft/auth/steps/XboxUserStep.cpp
     minecraft/auth/steps/XboxUserStep.h
-    minecraft/auth/steps/AuthlibInjectorMetadataStep.cpp
-    minecraft/auth/steps/AuthlibInjectorMetadataStep.h
     minecraft/auth/steps/YggdrasilStep.cpp
     minecraft/auth/steps/YggdrasilStep.h
-    minecraft/auth/steps/YggdrasilMinecraftProfileStep.cpp
-    minecraft/auth/steps/YggdrasilMinecraftProfileStep.h
+    minecraft/auth/steps/YggdrasilProfileStep.cpp
+    minecraft/auth/steps/YggdrasilProfileStep.h
+    minecraft/auth/steps/AuthlibInjectorMetadataStep.cpp
+    minecraft/auth/steps/AuthlibInjectorMetadataStep.h
 
     minecraft/update/AssetUpdateTask.h
     minecraft/update/AssetUpdateTask.cpp
@@ -256,6 +260,8 @@ set(MINECRAFT_SOURCES
 
     minecraft/launch/ClaimAccount.cpp
     minecraft/launch/ClaimAccount.h
+    minecraft/launch/EnsureAuthlibInjector.cpp
+    minecraft/launch/EnsureAuthlibInjector.h
     minecraft/launch/CreateGameFolders.cpp
     minecraft/launch/CreateGameFolders.h
     minecraft/launch/EnsureAvailableMemory.cpp
@@ -1068,8 +1074,6 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/MSALoginDialog.h
     ui/dialogs/AuthlibInjectorLoginDialog.cpp
     ui/dialogs/AuthlibInjectorLoginDialog.h
-    GetAuthlibInjectorApiLocation.cpp
-    GetAuthlibInjectorApiLocation.h
     ui/dialogs/NetworkJobFailedDialog.cpp
     ui/dialogs/NetworkJobFailedDialog.h
     ui/dialogs/NewComponentDialog.cpp

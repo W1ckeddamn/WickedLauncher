@@ -141,6 +141,11 @@ void InfoFrame::updateWithMod(const Mod& m)
 
 void InfoFrame::updateWithResource(const Resource& resource)
 {
+    if (auto schem = dynamic_cast<const SchematicResource*>(&resource)) {
+        auto nonConst = const_cast<SchematicResource*>(schem);
+        updateWithSchematic(*nonConst);
+        return;
+    }
     const QString homepage = resource.homepage();
     auto name = renderColorCodes(resource.name());
 
@@ -243,6 +248,31 @@ void InfoFrame::updateWithTexturePack(TexturePack& texture_pack)
     setName(name);
     setDescription(renderColorCodes(texture_pack.description()));
     setImage(texture_pack.image({ 64, 64 }, Qt::KeepAspectRatio));
+}
+
+void InfoFrame::updateWithSchematic(SchematicResource& schem)
+{
+    {
+        auto title = schem.name();
+        auto fileName = schem.getOriginalFileName();
+        if (!fileName.isEmpty() && fileName != title)
+            title = title + " (" + fileName + ")";
+        setName(title);
+    }
+    QStringList lines;
+    lines << tr("Format: %1").arg(schem.formatString());
+    if (!schem.dimensionsString().isEmpty())
+        lines << tr("Size: %1").arg(schem.dimensionsString());
+    if (!schem.author().isEmpty())
+        lines << tr("Author: %1").arg(schem.author());
+    if (schem.dataVersion())
+        lines << tr("DataVersion: %1").arg(schem.dataVersion());
+    if (schem.formatVersion())
+        lines << tr("FormatVersion: %1").arg(schem.formatVersion());
+    if (schem.paletteSize())
+        lines << tr("Palette: %1 entries").arg(schem.paletteSize());
+    setDescription(lines.join('\n'));
+    setImage();
 }
 
 void InfoFrame::clear()

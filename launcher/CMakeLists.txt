@@ -340,6 +340,18 @@ set(MINECRAFT_SOURCES
     minecraft/mod/Resource.cpp
     minecraft/mod/ResourceFolderModel.h
     minecraft/mod/ResourceFolderModel.cpp
+    minecraft/mod/CustomPlayerModel.h
+    minecraft/mod/CustomPlayerModel.cpp
+    minecraft/mod/CustomPlayerModelFolderModel.h
+    minecraft/mod/CustomPlayerModelFolderModel.cpp
+    minecraft/mod/YesSteveModel.h
+    minecraft/mod/YesSteveModel.cpp
+    minecraft/mod/YesSteveModelFolderModel.h
+    minecraft/mod/YesSteveModelFolderModel.cpp
+    minecraft/mod/SchematicResource.h
+    minecraft/mod/SchematicResource.cpp
+    minecraft/mod/SchematicsFolderModel.h
+    minecraft/mod/SchematicsFolderModel.cpp
     minecraft/mod/DataPack.h
     minecraft/mod/DataPack.cpp
     minecraft/mod/DataPackFolderModel.h
@@ -923,6 +935,12 @@ SET(LAUNCHER_SOURCES
     ui/pages/instance/TexturePackPage.cpp
     ui/pages/instance/ResourcePackPage.h
     ui/pages/instance/ResourcePackPage.cpp
+    ui/pages/instance/YesSteveModelPage.h
+    ui/pages/instance/YesSteveModelPage.cpp
+    ui/pages/instance/CustomPlayerModelPage.h
+    ui/pages/instance/CustomPlayerModelPage.cpp
+    ui/pages/instance/SchematicsPage.h
+    ui/pages/instance/SchematicsPage.cpp
     ui/pages/instance/ShaderPackPage.h
     ui/pages/instance/ShaderPackPage.cpp
     ui/pages/instance/ModFolderPage.cpp
@@ -1336,6 +1354,10 @@ if(APPLE)
     if(Launcher_ENABLE_UPDATER)
         target_link_libraries(Launcher_logic ${SPARKLE_FRAMEWORK})
     endif()
+endif()
+
+if(WIN32)
+    target_link_libraries(Launcher_logic dbghelp)
 endif()
 
 add_executable(${Launcher_Name} MACOSX_BUNDLE WIN32 main.cpp ${LAUNCHER_RCS})

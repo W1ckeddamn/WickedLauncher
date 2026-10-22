@@ -84,6 +84,9 @@
 #include "mod/ResourcePackFolderModel.h"
 #include "mod/ShaderPackFolderModel.h"
 #include "mod/TexturePackFolderModel.h"
+#include "mod/CustomPlayerModelFolderModel.h"
+#include "mod/YesSteveModelFolderModel.h"
+#include "mod/SchematicsFolderModel.h"
 
 #include "WorldList.h"
 
@@ -454,6 +457,21 @@ QString MinecraftInstance::texturePacksDir() const
 QString MinecraftInstance::shaderPacksDir() const
 {
     return FS::PathCombine(gameRoot(), "shaderpacks");
+}
+
+QString MinecraftInstance::customPlayerModelDir() const
+{
+    return FS::PathCombine(gameRoot(), "cpmmodels");
+}
+
+QString MinecraftInstance::yesSteveModelDir() const
+{
+    return FS::PathCombine(gameRoot(), "yesstevemodel");
+}
+
+QString MinecraftInstance::schematicsDir() const
+{
+    return FS::PathCombine(gameRoot(), "schematics");
 }
 
 QString MinecraftInstance::instanceConfigFolder() const
@@ -1362,6 +1380,30 @@ ShaderPackFolderModel* MinecraftInstance::shaderPackList()
     return m_shader_pack_list.get();
 }
 
+CustomPlayerModelFolderModel* MinecraftInstance::customPlayerModelList()
+{
+    if (!m_custom_player_model_list) {
+        m_custom_player_model_list.reset(new CustomPlayerModelFolderModel(customPlayerModelDir(), this));
+    }
+    return m_custom_player_model_list.get();
+}
+
+YesSteveModelFolderModel* MinecraftInstance::yesSteveModelList()
+{
+    if (!m_yes_steve_model_list) {
+        m_yes_steve_model_list.reset(new YesSteveModelFolderModel(yesSteveModelDir(), this));
+    }
+    return m_yes_steve_model_list.get();
+}
+
+SchematicsFolderModel* MinecraftInstance::schematicsList()
+{
+    if (!m_schematics_list) {
+        m_schematics_list.reset(new SchematicsFolderModel(schematicsDir(), this));
+    }
+    return m_schematics_list.get();
+}
+
 DataPackFolderModel* MinecraftInstance::dataPackList()
 {
     if (!m_data_pack_list && settings()->get("GlobalDataPacksEnabled").toBool()) {
@@ -1373,7 +1415,7 @@ DataPackFolderModel* MinecraftInstance::dataPackList()
 
 QList<ResourceFolderModel*> MinecraftInstance::resourceLists()
 {
-    return { loaderModList(), coreModList(), nilModList(), resourcePackList(), texturePackList(), shaderPackList(), dataPackList() };
+    return { loaderModList(), coreModList(), nilModList(), resourcePackList(), texturePackList(), shaderPackList(), yesSteveModelList(), customPlayerModelList(), schematicsList(), dataPackList() };
 }
 
 WorldList* MinecraftInstance::worldList()

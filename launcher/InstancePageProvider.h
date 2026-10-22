@@ -17,6 +17,9 @@
 #include "ui/pages/instance/TexturePackPage.h"
 #include "ui/pages/instance/VersionPage.h"
 #include "ui/pages/instance/WorldListPage.h"
+#include "ui/pages/instance/YesSteveModelPage.h"
+#include "ui/pages/instance/CustomPlayerModelPage.h"
+#include "ui/pages/instance/SchematicsPage.h"
 
 class InstancePageProvider : protected QObject, public BasePageProvider {
     Q_OBJECT
@@ -39,6 +42,9 @@ class InstancePageProvider : protected QObject, public BasePageProvider {
         values.append(new GlobalDataPackPage(inst));
         values.append(new TexturePackPage(inst, inst->texturePackList()));
         values.append(new ShaderPackPage(inst, inst->shaderPackList()));
+        values.append(new YesSteveModelPage(inst, inst->yesSteveModelList()));
+        values.append(new CustomPlayerModelPage(inst, inst->customPlayerModelList()));
+        values.append(new SchematicsPage(inst, inst->schematicsList()));
         values.append(new NotesPage(inst));
         values.append(new WorldListPage(inst, inst->worldList()));
         values.append(new ServersPage(inst));

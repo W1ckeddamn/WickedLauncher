@@ -1,7 +1,7 @@
 #pragma once
 
 #include "minecraft/auth/MinecraftAccount.h"
-#include "net/NetRequest.h"
+#include "net/Request.h"
 
 class GetAuthlibInjectorApiLocation : public Net::Request {
     Q_OBJECT

@@ -3,7 +3,7 @@
 
 #include "minecraft/auth/AuthStep.h"
 #include "net/NetJob.h"
-#include "net/NetRequest.h"
+#include "net/Request.h"
 
 class YggdrasilMinecraftProfileStep : public AuthStep {
     Q_OBJECT

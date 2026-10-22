@@ -42,7 +42,7 @@ void YggdrasilStep::login(const QString& password)
     auto headers = QList<Net::HeaderPair>{ { "Content-Type", "application/json" }, { "Accept", "application/json" } };
 
     auto [request, response] = Net::Request::makeByteArray(url, uploadData);
-    request->addHeaderProxy(new Net::RawHeaderProxy(headers));
+    request->addHeaderProxy(std::make_unique<Net::RawHeaderProxy>(headers));
     m_request = request;
 
     m_task.reset(new NetJob("YggdrasilStep::login", APPLICATION->network()));
@@ -72,7 +72,7 @@ void YggdrasilStep::refresh()
     auto headers = QList<Net::HeaderPair>{ { "Content-Type", "application/json" }, { "Accept", "application/json" } };
 
     auto [request, response] = Net::Request::makeByteArray(url, uploadData);
-    request->addHeaderProxy(new Net::RawHeaderProxy(headers));
+    request->addHeaderProxy(std::make_unique<Net::RawHeaderProxy>(headers));
     m_request = request;
 
     m_task.reset(new NetJob("YggdrasilStep::refresh", APPLICATION->network()));

@@ -25,7 +25,6 @@ void AuthlibInjectorMetadataStep::perform()
 
     m_task.reset(new NetJob("AuthlibInjectorMetadataStep", APPLICATION->network()));
     m_task->setAskRetry(false);
-    m_task->setAutoRetryLimit(0);
     m_task->addNetAction(m_request);
 
     connect(m_task.get(), &Task::finished, this, [this, response] { onRequestDone(response); });

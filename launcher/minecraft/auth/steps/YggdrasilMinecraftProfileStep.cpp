@@ -26,7 +26,7 @@ void YggdrasilMinecraftProfileStep::perform()
 
     auto [request, response] = Net::Request::makeByteArray(url);
     m_request = request;
-    m_request->addHeaderProxy(new Net::RawHeaderProxy(headers));
+    m_request->addHeaderProxy(std::make_unique<Net::RawHeaderProxy>(headers));
 
     m_task.reset(new NetJob("MinecraftProfileStep", APPLICATION->network()));
     m_task->setAskRetry(false);

@@ -412,7 +412,7 @@ QString AccountData::authServerUrl() const
     if (usesCustomApiServers() && !customAuthServerUrl.isEmpty()) {
         return customAuthServerUrl;
     }
-    return BuildConfig.MOJANG_AUTH_BASE;
+    return QStringLiteral("https://authserver.mojang.com");
 }
 
 QString AccountData::accountServerUrl() const
@@ -420,7 +420,7 @@ QString AccountData::accountServerUrl() const
     if (usesCustomApiServers() && !customAccountServerUrl.isEmpty()) {
         return customAccountServerUrl;
     }
-    return BuildConfig.MOJANG_ACCOUNT_BASE;
+    return QStringLiteral("https://api.mojang.com");
 }
 
 QString AccountData::sessionServerUrl() const
@@ -428,7 +428,7 @@ QString AccountData::sessionServerUrl() const
     if (usesCustomApiServers() && !customSessionServerUrl.isEmpty()) {
         return customSessionServerUrl;
     }
-    return BuildConfig.MOJANG_SESSION_BASE;
+    return QStringLiteral("https://sessionserver.mojang.com");
 }
 
 QString AccountData::servicesServerUrl() const
@@ -436,7 +436,7 @@ QString AccountData::servicesServerUrl() const
     if (usesCustomApiServers() && !customServicesServerUrl.isEmpty()) {
         return customServicesServerUrl;
     }
-    return BuildConfig.MOJANG_SERVICES_BASE;
+    return QStringLiteral("https://api.minecraftservices.com");
 }
 
 QString AccountData::authlibInjectorUrl() const

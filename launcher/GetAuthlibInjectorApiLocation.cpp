@@ -17,22 +17,21 @@ GetAuthlibInjectorApiLocation::Ptr GetAuthlibInjectorApiLocation::make(const QUr
     return GetAuthlibInjectorApiLocation::Ptr(new GetAuthlibInjectorApiLocation(url, account, username));
 }
 
-auto GetAuthlibInjectorApiLocation::Sink::init(QNetworkRequest& request) -> Task::State
+Net::Sink::InitResult GetAuthlibInjectorApiLocation::Sink::init(QNetworkRequest&)
 {
-    return Task::State::Running;
+    return InitType::Ok;
 }
 
-auto GetAuthlibInjectorApiLocation::Sink::write(QByteArray& data) -> Task::State
+Result<> GetAuthlibInjectorApiLocation::Sink::write(const QByteArray&)
 {
-    return Task::State::Running;
+    return {};
 }
 
-auto GetAuthlibInjectorApiLocation::Sink::abort() -> Task::State
+void GetAuthlibInjectorApiLocation::Sink::abort()
 {
-    return Task::State::Failed;
 }
 
-auto GetAuthlibInjectorApiLocation::Sink::finalize(QNetworkReply& reply) -> Task::State
+Result<> GetAuthlibInjectorApiLocation::Sink::finalize(QNetworkReply& reply)
 {
     QByteArray header = reply.rawHeader("X-Authlib-Injector-API-Location");
     QUrl url = m_outer.url();
@@ -44,10 +43,10 @@ auto GetAuthlibInjectorApiLocation::Sink::finalize(QNetworkReply& reply) -> Task
 
     const auto& encodedUrl = QString::fromUtf8(url.toEncoded(QUrl::FullyEncoded));
     m_outer.m_account = MinecraftAccount::createFromUsernameAuthlibInjector(m_outer.m_username, encodedUrl);
-    return Task::State::Succeeded;
+    return {};
 }
 
-MinecraftAccountPtr GetAuthlibInjectorApiLocation::getAccount()
+MinecraftAccountPtr GetAuthlibInjectorApiLocation::getAccount() const
 {
     return m_account;
 }

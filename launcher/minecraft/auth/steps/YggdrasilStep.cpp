@@ -41,9 +41,7 @@ void YggdrasilStep::login(const QString& password)
     QByteArray uploadData = QJsonDocument(requestData).toJson(QJsonDocument::Compact);
     auto headers = QList<Net::HeaderPair>{ { "Content-Type", "application/json" }, { "Accept", "application/json" } };
 
-    auto [request, response] = Net::Request::makeByteArray(url);
-    request->setVerb(Net::Request::Verb::Post);
-    request->setUploadData(uploadData);
+    auto [request, response] = Net::Request::makeByteArray(url, uploadData);
     request->addHeaderProxy(new Net::RawHeaderProxy(headers));
     m_request = request;
 
@@ -73,9 +71,7 @@ void YggdrasilStep::refresh()
     QByteArray uploadData = QJsonDocument(requestData).toJson(QJsonDocument::Compact);
     auto headers = QList<Net::HeaderPair>{ { "Content-Type", "application/json" }, { "Accept", "application/json" } };
 
-    auto [request, response] = Net::Request::makeByteArray(url);
-    request->setVerb(Net::Request::Verb::Post);
-    request->setUploadData(uploadData);
+    auto [request, response] = Net::Request::makeByteArray(url, uploadData);
     request->addHeaderProxy(new Net::RawHeaderProxy(headers));
     m_request = request;
 

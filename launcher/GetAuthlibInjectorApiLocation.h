@@ -8,21 +8,22 @@ class GetAuthlibInjectorApiLocation : public Net::Request {
    public:
     using Ptr = shared_qobject_ptr<GetAuthlibInjectorApiLocation>;
     GetAuthlibInjectorApiLocation(const QUrl& url, MinecraftAccountPtr account, const QString& username);
-    virtual ~GetAuthlibInjectorApiLocation() = default;
+    ~GetAuthlibInjectorApiLocation() override = default;
 
     static GetAuthlibInjectorApiLocation::Ptr make(const QUrl& url, MinecraftAccountPtr account, const QString& username);
 
-    MinecraftAccountPtr getAccount();
+    MinecraftAccountPtr getAccount() const;
 
     class Sink : public Net::Sink {
        public:
-        Sink(GetAuthlibInjectorApiLocation& outer) : m_outer(outer) {}
-        virtual ~Sink() = default;
+        explicit Sink(GetAuthlibInjectorApiLocation& outer) : m_outer(outer) {}
+        ~Sink() override = default;
 
-        auto init(QNetworkRequest& request) -> Task::State override;
-        auto write(QByteArray& data) -> Task::State override;
-        auto abort() -> Task::State override;
-        auto finalize(QNetworkReply& reply) -> Task::State override;
+        InitResult init(QNetworkRequest& request) override;
+        Result<> write(const QByteArray& data) override;
+        void abort() override;
+        Result<> finalize(QNetworkReply& reply) override;
+        bool hasLocalData() override { return false; }
 
        private:
         GetAuthlibInjectorApiLocation& m_outer;

@@ -1,0 +1,43 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # Запуск каждую ночь в 03:00 UTC (06:00 по МСК)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Возможность запустить синхронизацию вручную в любой момент из вкладки Actions
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync with PrismLauncher/PrismLauncher develop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and Merge Upstream
+        run: |
+          git remote add upstream https://github.com/PrismLauncher/PrismLauncher.git
+          git fetch upstream develop
+          
+          # Сливаем изменения из оригинального репозитория
+          git merge upstream/develop -m "chore: sync with upstream PrismLauncher/develop" --allow-unrelated-histories
+          
+          # Обновляем сабмодули при необходимости
+          git submodule update --init --recursive
+          
+          # Отправляем в ваш форк
+          git push origin develop

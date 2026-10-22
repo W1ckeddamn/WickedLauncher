@@ -38,7 +38,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QUuid>
+#include "BuildConfig.h"
 
 namespace {
 void tokenToJSONV3(QJsonObject& parent, const Token& t, const char* tokenName)
@@ -289,11 +291,31 @@ bool AccountData::resumeStateFromV3(QJsonObject data)
     auto typeS = typeV.toString();
     if (typeS == "MSA") {
         type = AccountType::MSA;
+    } else if (typeS == "AuthlibInjector" || typeS == "Elyby") {
+        type = AccountType::AuthlibInjector;
     } else if (typeS == "Offline") {
         type = AccountType::Offline;
     } else {
         qWarning() << "Failed to parse account data: type is not recognized.";
         return false;
+    }
+
+    if (type == AccountType::AuthlibInjector) {
+        if (typeS == "Elyby") {
+            customAuthServerUrl = "https://authserver.ely.by/api/authlib-injector/authserver";
+            customAccountServerUrl = "https://authserver.ely.by/api/authlib-injector/api";
+            customSessionServerUrl = "https://authserver.ely.by/api/authlib-injector/sessionserver";
+            customServicesServerUrl = "https://authserver.ely.by/api/authlib-injector/minecraftservices";
+            customAuthlibInjectorUrl = "https://authserver.ely.by/api/authlib-injector";
+            authlibInjectorMetadata = "";
+        } else {
+            customAuthServerUrl = data.value("customAuthServerUrl").toString();
+            customAccountServerUrl = data.value("customAccountServerUrl").toString();
+            customSessionServerUrl = data.value("customSessionServerUrl").toString();
+            customServicesServerUrl = data.value("customServicesServerUrl").toString();
+            customAuthlibInjectorUrl = data.value("authlibInjectorUrl").toString();
+            authlibInjectorMetadata = data.value("authlibInjectorMetadata").toString();
+        }
     }
 
     if (type == AccountType::MSA) {
@@ -335,6 +357,14 @@ QJsonObject AccountData::saveState() const
         tokenToJSONV3(output, mojangservicesToken, "xrp-mc");
     } else if (type == AccountType::Offline) {
         output["type"] = "Offline";
+    } else if (type == AccountType::AuthlibInjector) {
+        output["type"] = "AuthlibInjector";
+        output["customAuthServerUrl"] = customAuthServerUrl;
+        output["customAccountServerUrl"] = customAccountServerUrl;
+        output["customSessionServerUrl"] = customSessionServerUrl;
+        output["customServicesServerUrl"] = customServicesServerUrl;
+        output["authlibInjectorUrl"] = customAuthlibInjectorUrl;
+        output["authlibInjectorMetadata"] = authlibInjectorMetadata;
     }
 
     tokenToJSONV3(output, yggdrasilToken, "ygg");
@@ -365,4 +395,113 @@ QString AccountData::profileName() const
 QString AccountData::lastError() const
 {
     return errorString;
+}
+
+bool AccountData::usesCustomApiServers() const
+{
+    return type == AccountType::AuthlibInjector;
+}
+
+bool AccountData::canUploadSkins() const
+{
+    return minecraftProfile.canUploadSkins;
+}
+
+QString AccountData::authServerUrl() const
+{
+    if (usesCustomApiServers() && !customAuthServerUrl.isEmpty()) {
+        return customAuthServerUrl;
+    }
+    return BuildConfig.MOJANG_AUTH_BASE;
+}
+
+QString AccountData::accountServerUrl() const
+{
+    if (usesCustomApiServers() && !customAccountServerUrl.isEmpty()) {
+        return customAccountServerUrl;
+    }
+    return BuildConfig.MOJANG_ACCOUNT_BASE;
+}
+
+QString AccountData::sessionServerUrl() const
+{
+    if (usesCustomApiServers() && !customSessionServerUrl.isEmpty()) {
+        return customSessionServerUrl;
+    }
+    return BuildConfig.MOJANG_SESSION_BASE;
+}
+
+QString AccountData::servicesServerUrl() const
+{
+    if (usesCustomApiServers() && !customServicesServerUrl.isEmpty()) {
+        return customServicesServerUrl;
+    }
+    return BuildConfig.MOJANG_SERVICES_BASE;
+}
+
+QString AccountData::authlibInjectorUrl() const
+{
+    if (usesCustomApiServers()) {
+        return customAuthlibInjectorUrl;
+    }
+    return QString();
+}
+
+QString AccountData::userName() const
+{
+    if (type == AccountType::MSA) {
+        return QString();
+    }
+    return yggdrasilToken.extra["userName"].toString();
+}
+
+QString AccountData::clientToken() const
+{
+    if (type != AccountType::AuthlibInjector) {
+        return QString();
+    }
+    return yggdrasilToken.extra["clientToken"].toString();
+}
+
+void AccountData::setClientToken(QString clientToken)
+{
+    if (type != AccountType::AuthlibInjector) {
+        return;
+    }
+    yggdrasilToken.extra["clientToken"] = clientToken;
+}
+
+void AccountData::generateClientTokenIfMissing()
+{
+    if (yggdrasilToken.extra.contains("clientToken")) {
+        return;
+    }
+    invalidateClientToken();
+}
+
+void AccountData::invalidateClientToken()
+{
+    if (type != AccountType::AuthlibInjector) {
+        return;
+    }
+    yggdrasilToken.extra["clientToken"] = QUuid::createUuid().toString().remove(QRegularExpression("[{-}]"));
+}
+
+QString AccountData::accountDisplayString() const
+{
+    switch (type) {
+        case AccountType::AuthlibInjector: {
+            return userName();
+        }
+        case AccountType::Offline: {
+            return QObject::tr("<Offline>");
+        }
+        case AccountType::MSA: {
+            if (minecraftProfile.name.isEmpty()) {
+                return QObject::tr("<Unknown>");
+            }
+            return minecraftProfile.name;
+        }
+    }
+    return QString();
 }

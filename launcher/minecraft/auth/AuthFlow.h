@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <QImage>
 #include <QList>
 #include <QObject>
@@ -15,7 +16,7 @@ class AuthFlow : public Task {
    public:
     enum class Action { Refresh, Login, DeviceCode };
 
-    explicit AuthFlow(AccountData* data, Action action = Action::Refresh);
+    explicit AuthFlow(AccountData* data, Action action = Action::Refresh, const std::optional<QString>& password = std::nullopt);
     virtual ~AuthFlow() = default;
 
     void executeTask() override;

@@ -238,6 +238,12 @@ set(MINECRAFT_SOURCES
     minecraft/auth/steps/XboxAuthorizationStep.h
     minecraft/auth/steps/XboxUserStep.cpp
     minecraft/auth/steps/XboxUserStep.h
+    minecraft/auth/steps/AuthlibInjectorMetadataStep.cpp
+    minecraft/auth/steps/AuthlibInjectorMetadataStep.h
+    minecraft/auth/steps/YggdrasilStep.cpp
+    minecraft/auth/steps/YggdrasilStep.h
+    minecraft/auth/steps/YggdrasilMinecraftProfileStep.cpp
+    minecraft/auth/steps/YggdrasilMinecraftProfileStep.h
 
     minecraft/update/AssetUpdateTask.h
     minecraft/update/AssetUpdateTask.cpp
@@ -1058,6 +1064,10 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ImportResourceDialog.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h
+    ui/dialogs/AuthlibInjectorLoginDialog.cpp
+    ui/dialogs/AuthlibInjectorLoginDialog.h
+    GetAuthlibInjectorApiLocation.cpp
+    GetAuthlibInjectorApiLocation.h
     ui/dialogs/NetworkJobFailedDialog.cpp
     ui/dialogs/NetworkJobFailedDialog.h
     ui/dialogs/NewComponentDialog.cpp

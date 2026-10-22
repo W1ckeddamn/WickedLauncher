@@ -47,6 +47,7 @@
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/AuthlibInjectorLoginDialog.h"
 
 #include "Application.h"
 
@@ -130,6 +131,20 @@ void AccountListPage::listChanged()
 void AccountListPage::on_actionAddMicrosoft_triggered()
 {
     auto account = MSALoginDialog::newAccount(this);
+    if (account) {
+        m_accounts->addAccount(account);
+        if (m_accounts->count() == 1) {
+            m_accounts->setDefaultAccount(account);
+        }
+    }
+}
+
+void AccountListPage::on_actionAddAuthlibInjector_triggered()
+{
+    MinecraftAccountPtr account = AuthlibInjectorLoginDialog::newAccount(
+        this, tr("Please enter your username, password, and the URL of your authentication server.<br><br>"
+                 "<b>Caution!</b> Your username and password will be sent to the specified server!"));
+
     if (account) {
         m_accounts->addAccount(account);
         if (m_accounts->count() == 1) {

@@ -82,19 +82,40 @@ struct MinecraftEntitlement {
 struct MinecraftProfile {
     QString id;
     QString name;
+    bool canUploadSkins = true;
     Skin skin;
     QString currentCape;
     QMap<QString, Cape> capes;
     Validity validity = Validity::None;
 };
 
-enum class AccountType { MSA, Offline };
+enum class AccountType { MSA, AuthlibInjector, Offline };
 
 enum class AccountState { Unchecked, Offline, Working, Online, Disabled, Errored, Expired, Gone };
 
 struct AccountData {
     QJsonObject saveState() const;
     bool resumeStateFromV3(QJsonObject data);
+
+    bool canUploadSkins() const;
+    bool usesCustomApiServers() const;
+    QString authServerUrl() const;
+    QString accountServerUrl() const;
+    QString sessionServerUrl() const;
+    QString servicesServerUrl() const;
+    QString authlibInjectorUrl() const;
+
+    //! userName for authlib-injector accounts, gamertag for MSA
+    QString accountDisplayString() const;
+
+    //! Only valid for authlib-injector accounts. MSA does not preserve this information
+    QString userName() const;
+
+    //! Only valid for authlib-injector accounts.
+    QString clientToken() const;
+    void setClientToken(QString clientToken);
+    void invalidateClientToken();
+    void generateClientTokenIfMissing();
 
     //! Yggdrasil access token, as passed to the game.
     QString accessToken() const;
@@ -105,6 +126,13 @@ struct AccountData {
     QString lastError() const;
 
     AccountType type = AccountType::MSA;
+
+    QString customAuthServerUrl;
+    QString customAccountServerUrl;
+    QString customSessionServerUrl;
+    QString customServicesServerUrl;
+    QString customAuthlibInjectorUrl;
+    QString authlibInjectorMetadata;
 
     QString msaClientID;
     Token msaToken;

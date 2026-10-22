@@ -87,6 +87,8 @@ class MinecraftAccount : public QObject, public Usable {
 
     static MinecraftAccountPtr createOffline(const QString& username);
 
+    static MinecraftAccountPtr createFromUsernameAuthlibInjector(const QString& username, const QString& authlibInjectorUrl);
+
     static MinecraftAccountPtr loadFromJsonV3(const QJsonObject& json);
 
     static QUuid uuidFromUsername(QString username);
@@ -95,7 +97,7 @@ class MinecraftAccount : public QObject, public Usable {
     QJsonObject saveToJson() const;
 
    public: /* manipulation */
-    shared_qobject_ptr<AuthFlow> login(bool useDeviceCode = false);
+    shared_qobject_ptr<AuthFlow> login(bool useDeviceCode = false, const std::optional<QString>& password = std::nullopt);
 
     shared_qobject_ptr<AuthFlow> refresh();
 
@@ -116,15 +118,21 @@ class MinecraftAccount : public QObject, public Usable {
 
     AccountType accountType() const noexcept { return data.type; }
 
-    bool ownsMinecraft() const { return data.type == AccountType::Offline || data.minecraftEntitlement.ownsMinecraft; }
+    bool ownsMinecraft() const { return data.type == AccountType::Offline || data.type == AccountType::AuthlibInjector || data.minecraftEntitlement.ownsMinecraft; }
 
     bool hasProfile() const { return data.profileId().size() != 0; }
+
+    bool canUploadSkins() const { return data.canUploadSkins(); }
+    bool usesCustomApiServers() const { return data.usesCustomApiServers(); }
 
     QString typeString() const
     {
         switch (data.type) {
             case AccountType::MSA: {
                 return "msa";
+            } break;
+            case AccountType::AuthlibInjector: {
+                return "authlib-injector";
             } break;
             case AccountType::Offline: {
                 return "offline";

@@ -89,6 +89,19 @@ MinecraftAccountPtr MinecraftAccount::createOffline(const QString& username)
     return account;
 }
 
+MinecraftAccountPtr MinecraftAccount::createFromUsernameAuthlibInjector(const QString& username, const QString& authlibInjectorUrl)
+{
+    auto account = MinecraftAccountPtr(new MinecraftAccount());
+    account->data.type = AccountType::AuthlibInjector;
+    account->data.customAuthlibInjectorUrl = authlibInjectorUrl;
+    account->data.yggdrasilToken.extra["userName"] = username;
+    account->data.generateClientTokenIfMissing();
+    account->data.minecraftEntitlement.ownsMinecraft = true;
+    account->data.minecraftEntitlement.canPlayMinecraft = true;
+    account->data.minecraftEntitlement.validity = Validity::Certain;
+    return account;
+}
+
 QJsonObject MinecraftAccount::saveToJson() const
 {
     return data.saveState();
@@ -113,11 +126,11 @@ QPixmap MinecraftAccount::getFace(int width, int height) const
     return skin.scaled(width, height, Qt::KeepAspectRatio);
 }
 
-shared_qobject_ptr<AuthFlow> MinecraftAccount::login(bool useDeviceCode)
+shared_qobject_ptr<AuthFlow> MinecraftAccount::login(bool useDeviceCode, const std::optional<QString>& password)
 {
     Q_ASSERT(m_currentTask.get() == nullptr);
 
-    m_currentTask.reset(new AuthFlow(&data, useDeviceCode ? AuthFlow::Action::DeviceCode : AuthFlow::Action::Login));
+    m_currentTask.reset(new AuthFlow(&data, useDeviceCode ? AuthFlow::Action::DeviceCode : AuthFlow::Action::Login, password));
     connect(m_currentTask.get(), &Task::succeeded, this, &MinecraftAccount::authSucceeded);
     connect(m_currentTask.get(), &Task::failed, this, &MinecraftAccount::authFailed);
     connect(m_currentTask.get(), &Task::aborted, this, [this] { authFailed(tr("Aborted")); });

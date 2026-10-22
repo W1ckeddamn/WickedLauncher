@@ -121,11 +121,11 @@ void AccountList::addAccount(const MinecraftAccountPtr account)
     connect(account.get(), &MinecraftAccount::changed, this, &AccountList::accountChanged);
     connect(account.get(), &MinecraftAccount::activityChanged, this, &AccountList::accountActivityChanged);
 
-    // override/replace existing account with the same profileId
+    // override/replace existing account with the same profileId (for MSA accounts only)
     auto profileId = account->profileId();
-    if (profileId.size()) {
+    if (profileId.size() && account->accountType() == AccountType::MSA) {
         auto existingAccount = findAccountByProfileId(profileId);
-        if (existingAccount != -1) {
+        if (existingAccount != -1 && m_accounts[existingAccount]->accountType() == AccountType::MSA) {
             qDebug() << "Replacing old account with a new one with the same profile ID!";
 
             MinecraftAccountPtr existingAccountPtr = m_accounts[existingAccount];

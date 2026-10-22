@@ -48,6 +48,7 @@
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/EnhancedOfflineDialog.h"
 
 #include "Application.h"
 
@@ -150,6 +151,17 @@ void AccountListPage::on_actionAddOffline_triggered()
     }
 }
 
+void AccountListPage::on_actionAddEnhancedOffline_triggered()
+{
+    const auto account = createEnhancedOfflineAccount(this);
+    if (account) {
+        m_accounts->addAccount(account);
+        if (m_accounts->count() == 1) {
+            m_accounts->setDefaultAccount(account);
+        }
+    }
+}
+
 void AccountListPage::on_actionAddAuthlibInjector_triggered()
 {
     auto account = AuthlibInjectorLoginDialog::newAccount(this, tr("Log in with an account from an authlib-injector compatible server."));
@@ -216,7 +228,7 @@ void AccountListPage::updateButtonStates()
         MinecraftAccountPtr account = selected.data(AccountList::PointerRole).value<MinecraftAccountPtr>();
         accountIsReady = !account->isActive();
         accountIsOnline = account->accountType() != AccountType::Offline;
-        accountCanManageSkins = account->accountData()->supportsSkinUpload();
+        accountCanManageSkins = account->accountData()->supportsSkinUpload() || !accountIsOnline;
 
         accountCanMoveUp = selected.row() > 0;
         int indexOfLast = m_accounts->count() - 1;
@@ -245,6 +257,10 @@ void AccountListPage::on_actionManageSkins_triggered()
     if (selection.size() > 0) {
         QModelIndex selected = selection.first();
         MinecraftAccountPtr account = selected.data(AccountList::PointerRole).value<MinecraftAccountPtr>();
+        if (account->accountType() == AccountType::Offline) {
+            createEnhancedOfflineAccount(this, account);
+            return;
+        }
         SkinManageDialog dialog(this, account);
         dialog.exec();
     }

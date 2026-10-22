@@ -43,6 +43,7 @@
 #include "net/NetUtils.h"
 #include "ui/InstanceWindow.h"
 #include "minecraft/auth/Yggdrasil.h"
+#include "minecraft/auth/LocalSkinServer.h"
 #include "ui/dialogs/AuthlibInjectorLoginDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
@@ -336,6 +337,26 @@ void LaunchController::login()
                 }
             }
             m_session->MakeOffline(name);
+        }
+    } else {
+        // Offline account: check if it has custom skin/cape to serve via local server
+        const auto& skinData = m_accountToUse->accountData()->minecraftProfile.skin.data;
+        if (!skinData.isEmpty()) {
+            auto& server = LocalSkinServer::instance();
+            if (server.ensureRunning()) {
+                QByteArray capeData;
+                const auto& capes = m_accountToUse->accountData()->minecraftProfile.capes;
+                if (!capes.isEmpty()) {
+                    capeData = capes.constBegin().value().data;
+                }
+                server.registerAccount(m_accountToUse->accountData()->profileId(),
+                                       m_accountToUse->accountData()->profileName(),
+                                       skinData,
+                                       m_accountToUse->accountData()->minecraftProfile.skin.variant,
+                                       capeData);
+                m_session->authlib_injector_url = server.url();
+                m_session->authlib_injector_metadata = server.metadata();
+            }
         }
     }
 

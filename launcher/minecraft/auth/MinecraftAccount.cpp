@@ -74,7 +74,11 @@ MinecraftAccountPtr MinecraftAccount::createBlankMSA()
     return account;
 }
 
-MinecraftAccountPtr MinecraftAccount::createOffline(const QString& username)
+MinecraftAccountPtr MinecraftAccount::createOffline(const QString& username,
+                                                   const QString& customUuid,
+                                                   const QByteArray& skinData,
+                                                   const QString& skinVariant,
+                                                   const QByteArray& capeData)
 {
     auto account = makeShared<MinecraftAccount>();
     account->data.type = AccountType::Offline;
@@ -83,9 +87,41 @@ MinecraftAccountPtr MinecraftAccount::createOffline(const QString& username)
     account->data.yggdrasilToken.issueInstant = QDateTime::currentDateTimeUtc();
     account->data.yggdrasilToken.extra["userName"] = username;
     account->data.yggdrasilToken.extra["clientToken"] = QUuid::createUuid().toString(QUuid::Id128);
-    account->data.minecraftProfile.id = uuidFromUsername(username).toString(QUuid::Id128);
+
+    QString id = customUuid.trimmed();
+    if (id.isEmpty()) {
+        id = uuidFromUsername(username).toString(QUuid::Id128);
+    } else {
+        auto parsed = QUuid::fromString(id);
+        if (!parsed.isNull()) {
+            id = parsed.toString(QUuid::Id128);
+        } else {
+            id.remove('-');
+            id.remove('{');
+            id.remove('}');
+        }
+    }
+
+    account->data.minecraftProfile.id = id;
     account->data.minecraftProfile.name = username;
     account->data.minecraftProfile.validity = Validity::Certain;
+
+    if (!skinData.isEmpty()) {
+        account->data.minecraftProfile.skin.id = id;
+        account->data.minecraftProfile.skin.data = skinData;
+        account->data.minecraftProfile.skin.variant = skinVariant.isEmpty() ? "classic" : skinVariant;
+        account->data.minecraftProfile.skin.url = "local";
+    }
+
+    if (!capeData.isEmpty()) {
+        Cape cape;
+        cape.id = "local_cape";
+        cape.url = "local";
+        cape.data = capeData;
+        account->data.minecraftProfile.capes[cape.id] = cape;
+        account->data.minecraftProfile.currentCape = cape.id;
+    }
+
     return account;
 }
 

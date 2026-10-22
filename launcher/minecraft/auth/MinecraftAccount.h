@@ -87,7 +87,11 @@ class MinecraftAccount : public QObject, public Usable {
 
     static MinecraftAccountPtr createBlankMSA();
 
-    static MinecraftAccountPtr createOffline(const QString& username);
+    static MinecraftAccountPtr createOffline(const QString& username,
+                                            const QString& customUuid = {},
+                                            const QByteArray& skinData = {},
+                                            const QString& skinVariant = "classic",
+                                            const QByteArray& capeData = {});
 
     /** A not yet logged in account on the Yggdrasil server at `apiRoot` (already resolved through
      *  X-Authlib-Injector-API-Location), whose metadata document is `metadata`. */

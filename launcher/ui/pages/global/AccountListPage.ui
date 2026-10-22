@@ -54,6 +54,7 @@
    </attribute>
    <addaction name="actionAddMicrosoft"/>
    <addaction name="actionAddOffline"/>
+   <addaction name="actionAddEnhancedOffline"/>
    <addaction name="actionAddAuthlibInjector"/>
    <addaction name="actionRefresh"/>
    <addaction name="actionRemove"/>
@@ -93,6 +94,14 @@
   <action name="actionAddOffline">
    <property name="text">
     <string>Add &amp;Offline</string>
+   </property>
+  </action>
+  <action name="actionAddEnhancedOffline">
+   <property name="text">
+    <string>Add &amp;Enhanced Offline</string>
+   </property>
+   <property name="toolTip">
+    <string>Add an offline account with a custom UUID, skin, and cape</string>
    </property>
   </action>
   <action name="actionAddAuthlibInjector">

@@ -218,6 +218,8 @@ set(MINECRAFT_SOURCES
     minecraft/auth/AuthStep.h
     minecraft/auth/MinecraftAccount.cpp
     minecraft/auth/MinecraftAccount.h
+    minecraft/auth/LocalSkinServer.cpp
+    minecraft/auth/LocalSkinServer.h
     minecraft/auth/Parsers.cpp
     minecraft/auth/Parsers.h
     minecraft/auth/Yggdrasil.cpp
@@ -1127,6 +1129,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/InstallLoaderDialog.h
     ui/dialogs/ChooseOfflineNameDialog.cpp
     ui/dialogs/ChooseOfflineNameDialog.h
+    ui/dialogs/EnhancedOfflineDialog.cpp
+    ui/dialogs/EnhancedOfflineDialog.h
     ui/dialogs/UntrustedModsDialog.cpp
     ui/dialogs/UntrustedModsDialog.h
 

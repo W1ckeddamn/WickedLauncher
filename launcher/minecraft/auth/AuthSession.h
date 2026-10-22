@@ -32,8 +32,8 @@ struct AuthSession {
     QString authlib_injector_metadata;
     QString authlib_injector_jar;
 
-    //! Offline and demo launches don't talk to the server, so they run without the agent
-    bool usesAuthlibInjector() const { return !authlib_injector_url.isEmpty() && launchMode == LaunchMode::Normal; }
+    //! Offline accounts with local skin server or authlib-injector servers use the agent (demo mode does not)
+    bool usesAuthlibInjector() const { return !authlib_injector_url.isEmpty() && launchMode != LaunchMode::Demo; }
 };
 
 using AuthSessionPtr = std::shared_ptr<AuthSession>;

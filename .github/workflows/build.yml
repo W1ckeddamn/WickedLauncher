@@ -119,11 +119,33 @@ jobs:
 
       - name: Configure project
         run: |
-          cmake --preset "$CMAKE_PRESET" -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET"
+          CMAKE_ARGS=()
+          if [ -n "$CMAKE_C_COMPILER_LAUNCHER" ]; then
+            CMAKE_ARGS+=("-D" "CMAKE_C_COMPILER_LAUNCHER=$CMAKE_C_COMPILER_LAUNCHER")
+          fi
+          if [ -n "$CMAKE_CXX_COMPILER_LAUNCHER" ]; then
+            CMAKE_ARGS+=("-D" "CMAKE_CXX_COMPILER_LAUNCHER=$CMAKE_CXX_COMPILER_LAUNCHER")
+          fi
+          cmake --preset "$CMAKE_PRESET" \
+            -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" \
+            -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
+            "${CMAKE_ARGS[@]}"
 
       - name: Run build
         run: |
           cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
+
+      - name: Print cache statistics
+        if: always()
+        run: |
+          if command -v sccache >/dev/null 2>&1; then
+            echo "=== sccache stats ==="
+            sccache --show-stats || true
+          fi
+          if command -v ccache >/dev/null 2>&1; then
+            echo "=== ccache stats ==="
+            ccache -s || true
+          fi
 
       - name: Run tests
         env:

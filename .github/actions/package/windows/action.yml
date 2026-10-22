@@ -8,7 +8,7 @@ inputs:
   build-type:
     description: Type for the build
     required: true
-    default: Debug
+    default: Release
   artifact-name:
     description: Name of the uploaded artifact
     required: true
@@ -45,6 +45,7 @@ runs:
         INSTALL_DIR: install
       run: |
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }}
+        find ${{ env.INSTALL_DIR }} -type f \( -name "*.exe" -o -name "*.dll" \) -exec strip --strip-unneeded {} + 2>/dev/null || true
         touch ${{ env.INSTALL_DIR }}/manifest.txt
         for l in $(find ${{ env.INSTALL_DIR }} -type f); do l=$(cygpath -u $l); l=${l#$(pwd)/}; l=${l#${{ env.INSTALL_DIR }}/}; l=${l#./}; echo $l; done >> ${{ env.INSTALL_DIR }}/manifest.txt
 
@@ -56,6 +57,7 @@ runs:
         INSTALL_DIR: install
       run: |
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }}
+        Get-ChildItem -Path ${{ env.INSTALL_DIR }} -Include *.pdb,*.ilk,*.lib,*.exp -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
 
         cd ${{ github.workspace }}
 
@@ -112,6 +114,7 @@ runs:
       run: |
         cp -r ${{ env.INSTALL_DIR }} ${{ env.INSTALL_PORTABLE_DIR }}  # cmake install on Windows is slow, let's just copy instead
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }} --prefix ${{ env.INSTALL_PORTABLE_DIR }} --component portable
+        find ${{ env.INSTALL_PORTABLE_DIR }} -type f \( -name "*.exe" -o -name "*.dll" \) -exec strip --strip-unneeded {} + 2>/dev/null || true
         for l in $(find ${{ env.INSTALL_PORTABLE_DIR }} -type f); do l=$(cygpath -u $l); l=${l#$(pwd)/}; l=${l#${{ env.INSTALL_PORTABLE_DIR }}/}; l=${l#./}; echo $l; done >> ${{ env.INSTALL_PORTABLE_DIR }}/manifest.txt
 
     - name: Package (MSVC, portable)
@@ -124,6 +127,7 @@ runs:
       run: |
         cp -r ${{ env.INSTALL_DIR }} ${{ env.INSTALL_PORTABLE_DIR }}  # cmake install on Windows is slow, let's just copy instead
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }} --prefix ${{ env.INSTALL_PORTABLE_DIR }} --component portable
+        Get-ChildItem -Path ${{ env.INSTALL_PORTABLE_DIR }} -Include *.pdb,*.ilk,*.lib,*.exp -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
 
         Get-ChildItem ${{ env.INSTALL_PORTABLE_DIR }} -Recurse | ForEach FullName | Resolve-Path -Relative | %{ $_.TrimStart('.\') } | %{ $_.TrimStart('${{ env.INSTALL_PORTABLE_DIR }}') } | %{ $_.TrimStart('\') } | Out-File -FilePath ${{ env.INSTALL_DIR }}/manifest.txt
 
@@ -147,6 +151,10 @@ runs:
 
         cd ${{ env.INSTALL_DIR }}
         makensis -NOCD "${{ github.workspace }}/${{ env.BUILD_DIR }}/program_info/win_install.nsi"
+        cd ${{ github.workspace }}
+        if (Test-Path "${{ github.workspace }}\PrismLauncher-Setup.exe") {
+          Move-Item -Path "${{ github.workspace }}\PrismLauncher-Setup.exe" -Destination "${{ github.workspace }}\WickedLauncher-Setup.exe" -Force
+        }
 
     - name: Sign installer
       if: ${{ env.CI_HAS_ACCESS_TO_AZURE != '' && inputs.azure-client-id != '' }}
@@ -157,7 +165,7 @@ runs:
         certificate-profile-name: PrismLauncher
 
         files: |
-          ${{ github.workspace }}\PrismLauncher-Setup.exe
+          ${{ github.workspace }}\WickedLauncher-Setup.exe
 
         # recommended in https://github.com/Azure/artifact-signing-action#timestamping-1
         timestamp-rfc3161: 'http://timestamp.acs.microsoft.com'
@@ -178,17 +186,17 @@ runs:
     - name: Upload binary zip
       uses: actions/upload-artifact@v7
       with:
-        name: PrismLauncher-${{ inputs.artifact-name }}-${{ inputs.version }}-${{ inputs.build-type }}
+        name: WickedLauncher-${{ inputs.artifact-name }}-${{ inputs.version }}-${{ inputs.build-type }}
         path: install/**
 
     - name: Upload portable zip
       uses: actions/upload-artifact@v7
       with:
-        name: PrismLauncher-${{ inputs.artifact-name }}-Portable-${{ inputs.version }}-${{ inputs.build-type }}
+        name: WickedLauncher-${{ inputs.artifact-name }}-Portable-${{ inputs.version }}-${{ inputs.build-type }}
         path: install-portable/**
 
     - name: Upload installer
       uses: actions/upload-artifact@v7
       with:
-        name: PrismLauncher-${{ inputs.artifact-name }}-Setup-${{ inputs.version }}-${{ inputs.build-type }}
-        path: PrismLauncher-Setup.exe
+        name: WickedLauncher-${{ inputs.artifact-name }}-Setup-${{ inputs.version }}-${{ inputs.build-type }}
+        path: WickedLauncher-Setup.exe

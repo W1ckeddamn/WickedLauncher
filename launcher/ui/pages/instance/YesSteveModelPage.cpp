@@ -10,20 +10,20 @@
 YesSteveModelPage::YesSteveModelPage(MinecraftInstance* instance, YesSteveModelFolderModel* model, QWidget* parent)
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
-    ui->actionViewConfigs->setVisible(false);
+    m_ui->actionViewConfigs->setVisible(false);
     
     // Add Rename action
     auto renameAction = new QAction(tr("Rename"), this);
     renameAction->setIcon(QIcon::fromTheme("edit-rename"));
     connect(renameAction, &QAction::triggered, this, &YesSteveModelPage::renameItem);
-    ui->actionsToolbar->addAction(renameAction);
+    m_ui->actionsToolbar->addAction(renameAction);
 
     m_fileSelectionFilter = "%1 (*.zip *.7z *.ysm);;All files (*.*)";
 }
 
 void YesSteveModelPage::renameItem()
 {
-    auto selection = m_filterModel->mapSelectionToSource(ui->treeView->selectionModel()->selection());
+    auto selection = m_filterModel->mapSelectionToSource(m_ui->treeView->selectionModel()->selection());
     if (selection.indexes().isEmpty()) return;
 
     auto index = selection.indexes().first();

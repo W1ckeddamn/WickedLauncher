@@ -11,23 +11,23 @@ CustomPlayerModelPage::CustomPlayerModelPage(MinecraftInstance* instance, Custom
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
     // Hide actions that are not relevant for CustomPlayerModel
-    ui->actionEnableItem->setVisible(false);
-    ui->actionDisableItem->setVisible(false);
-    ui->actionViewConfigs->setVisible(false);
-    ui->actionViewHomepage->setVisible(false);
+    m_ui->actionEnableItem->setVisible(false);
+    m_ui->actionDisableItem->setVisible(false);
+    m_ui->actionViewConfigs->setVisible(false);
+    m_ui->actionViewHomepage->setVisible(false);
     
     // Add Rename action
     auto renameAction = new QAction(tr("Rename"), this);
     renameAction->setIcon(QIcon::fromTheme("edit-rename"));
     connect(renameAction, &QAction::triggered, this, &CustomPlayerModelPage::renameItem);
-    ui->actionsToolbar->addAction(renameAction);
+    m_ui->actionsToolbar->addAction(renameAction);
 
     m_fileSelectionFilter = "%1 (*.cpm *.cpmproject *.json *.png *.zip);;All files (*.*)";
 }
 
 void CustomPlayerModelPage::renameItem()
 {
-    auto selection = m_filterModel->mapSelectionToSource(ui->treeView->selectionModel()->selection());
+    auto selection = m_filterModel->mapSelectionToSource(m_ui->treeView->selectionModel()->selection());
     if (selection.indexes().isEmpty()) return;
 
     auto index = selection.indexes().first();

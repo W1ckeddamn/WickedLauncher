@@ -10,22 +10,22 @@
 SchematicsPage::SchematicsPage(MinecraftInstance* instance, SchematicsFolderModel* model, QWidget* parent)
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
-    ui->actionEnableItem->setVisible(false);
-    ui->actionDisableItem->setVisible(false);
-    ui->actionViewConfigs->setVisible(false);
-    ui->actionViewHomepage->setVisible(false);
+    m_ui->actionEnableItem->setVisible(false);
+    m_ui->actionDisableItem->setVisible(false);
+    m_ui->actionViewConfigs->setVisible(false);
+    m_ui->actionViewHomepage->setVisible(false);
 
     auto renameAction = new QAction(tr("Rename"), this);
     renameAction->setIcon(QIcon::fromTheme("edit-rename"));
     connect(renameAction, &QAction::triggered, this, &SchematicsPage::renameItem);
-    ui->actionsToolbar->addAction(renameAction);
+    m_ui->actionsToolbar->addAction(renameAction);
 
     m_fileSelectionFilter = "%1 (*.schematic *.schem *.litematic *.nbt *.zip);;All files (*.*)";
 }
 
 void SchematicsPage::renameItem()
 {
-    auto selection = m_filterModel->mapSelectionToSource(ui->treeView->selectionModel()->selection());
+    auto selection = m_filterModel->mapSelectionToSource(m_ui->treeView->selectionModel()->selection());
     if (selection.indexes().isEmpty()) return;
 
     auto index = selection.indexes().first();

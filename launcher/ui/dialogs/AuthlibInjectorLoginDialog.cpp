@@ -3,6 +3,7 @@
 #include "ui_AuthlibInjectorLoginDialog.h"
 
 #include "Application.h"
+#include "net/NetJob.h"
 #include <QtWidgets/QPushButton>
 
 AuthlibInjectorLoginDialog::AuthlibInjectorLoginDialog(QWidget* parent)
@@ -86,7 +87,7 @@ void AuthlibInjectorLoginDialog::accept()
     setUserInputsEnabled(false);
     ui->loadingLabel->setVisible(true);
 
-    auto netJob = NetJob::Ptr(new NetJob("Get authlib-injector API root", APPLICATION->network()));
+    auto netJob = new NetJob("Get authlib-injector API root", APPLICATION->network());
     netJob->setAskRetry(false);
 
     auto username = ui->userTextBox->text();
@@ -94,8 +95,8 @@ void AuthlibInjectorLoginDialog::accept()
     netJob->addNetAction(m_apiLocationRequest);
 
     m_apiLocationTask.reset(netJob);
-    connect(netJob.get(), &NetJob::succeeded, this, &AuthlibInjectorLoginDialog::onApiLocationTaskSucceeded);
-    connect(netJob.get(), &NetJob::failed, this, &AuthlibInjectorLoginDialog::onApiLocationTaskFailed);
+    connect(netJob, &Task::succeeded, this, &AuthlibInjectorLoginDialog::onApiLocationTaskSucceeded);
+    connect(netJob, &Task::failed, this, &AuthlibInjectorLoginDialog::onApiLocationTaskFailed);
     m_apiLocationTask->start();
 }
 

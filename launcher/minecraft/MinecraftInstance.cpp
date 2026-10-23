@@ -35,6 +35,11 @@
  *      limitations under the License.
  */
 
+#include <QApplication>
+#include <QDir>
+#include <QMenu>
+#include <QMessageBox>
+
 #include "MinecraftInstance.h"
 #include "Application.h"
 #include "BuildConfig.h"
@@ -46,6 +51,10 @@
 #include "FileSystem.h"
 #include "MMCTime.h"
 #include "java/JavaVersion.h"
+
+#include "minecraft/SafeMode.h"
+#include "minecraft/mod/ModChecker.h"
+#include "ui/dialogs/ModCheckDialog.h"
 
 #include "launch/LaunchTask.h"
 #include "launch/TaskStepWrapper.h"
@@ -315,18 +324,44 @@ QSet<QString> MinecraftInstance::traits() const
 // FIXME: move UI code out of MinecraftInstance
 void MinecraftInstance::populateLaunchMenu(QMenu* menu)
 {
+    const bool running = isRunning();
+    const bool canStart = canLaunch();
+    const bool hasMods = SafeMode::hasMods(this);
+
     QAction* normalLaunch = menu->addAction(tr("&Launch"));
     normalLaunch->setShortcut(QKeySequence::Open);
     QAction* normalLaunchOffline = menu->addAction(tr("Launch &Offline"));
     normalLaunchOffline->setShortcut(QKeySequence(tr("Ctrl+Shift+O")));
     QAction* normalLaunchDemo = menu->addAction(tr("Launch &Demo"));
     normalLaunchDemo->setShortcut(QKeySequence(tr("Ctrl+Alt+O")));
+    QAction* safeModeLaunch = menu->addAction(tr("Launch in &Safe Mode"));
+    safeModeLaunch->setToolTip(hasMods ? tr("Start with an empty mods folder. Mods are restored when the game exits.")
+                                       : tr("This instance has no mods to disable."));
 
-    normalLaunchDemo->setEnabled(supportsDemo());
+    normalLaunch->setEnabled(!running);
+    normalLaunchOffline->setEnabled(!running);
+    normalLaunchDemo->setEnabled(!running && supportsDemo());
+    safeModeLaunch->setEnabled(!running && canStart && hasMods);
+
+    if (running) {
+        for (auto* action : { normalLaunch, normalLaunchOffline, normalLaunchDemo, safeModeLaunch }) {
+            action->setToolTip(tr("This instance is already running."));
+        }
+
+        QAction* parallelPlay = menu->addAction(tr("Play With Another &Account…"));
+        parallelPlay->setToolTip(
+            tr("Minecraft cannot run the same instance twice. Duplicate it to use another account at the same time."));
+        connect(parallelPlay, &QAction::triggered, this, [this] { APPLICATION->showParallelPlayHelp(this); });
+    }
 
     connect(normalLaunch, &QAction::triggered, this, [this] { APPLICATION->launch(this); });
     connect(normalLaunchOffline, &QAction::triggered, this, [this] { APPLICATION->launch(this, LaunchMode::Offline); });
     connect(normalLaunchDemo, &QAction::triggered, this, [this] { APPLICATION->launch(this, LaunchMode::Demo); });
+    connect(safeModeLaunch, &QAction::triggered, this, [this] {
+        LaunchOptions options;
+        options.safeMode = true;
+        APPLICATION->launch(this, LaunchMode::Normal, nullptr, nullptr, QString(), options);
+    });
 
     auto accounts = APPLICATION->accounts();
     if (accounts->count() > 1) {
@@ -334,6 +369,10 @@ void MinecraftInstance::populateLaunchMenu(QMenu* menu)
         for (int i = 0; i < accounts->count(); i++) {
             MinecraftAccountPtr account = accounts->at(i);
             QAction* action = launchAsMenu->addAction(account->displayName());
+            action->setEnabled(!running);
+            if (running) {
+                action->setToolTip(tr("This instance is already running. Duplicate it to use another account at the same time."));
+            }
             if (auto face = account->getFace(); !face.isNull()) {
                 action->setIcon(face);
             } else {
@@ -343,6 +382,20 @@ void MinecraftInstance::populateLaunchMenu(QMenu* menu)
                     [this, account] { APPLICATION->launch(this, LaunchMode::Normal, nullptr, account); });
         }
     }
+
+    menu->addSeparator();
+    QAction* checkMods = menu->addAction(tr("Check &Mods…"));
+    checkMods->setEnabled(hasMods);
+    connect(checkMods, &QAction::triggered, this, [this] {
+        const auto issues = ModChecker::check(modsRoot());
+        if (issues.isEmpty()) {
+            QMessageBox::information(QApplication::activeWindow(), tr("Mod check"),
+                                     tr("No problems were found in the mods folder."));
+            return;
+        }
+        ModCheckDialog dialog(modsRoot(), issues, ModCheckDialog::Mode::Review, false, QApplication::activeWindow());
+        dialog.exec();
+    });
 
     QString profilersTitle = tr("Profilers");
     menu->addSeparator()->setText(profilersTitle);

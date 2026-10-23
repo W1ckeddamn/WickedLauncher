@@ -294,6 +294,8 @@ set(MINECRAFT_SOURCES
     minecraft/GradleSpecifier.h
     minecraft/MinecraftInstance.cpp
     minecraft/MinecraftInstance.h
+    minecraft/SafeMode.cpp
+    minecraft/SafeMode.h
     minecraft/LaunchProfile.cpp
     minecraft/LaunchProfile.h
     minecraft/Component.cpp
@@ -335,6 +337,8 @@ set(MINECRAFT_SOURCES
     minecraft/mod/MetadataHandler.h
     minecraft/mod/Mod.h
     minecraft/mod/Mod.cpp
+    minecraft/mod/ModChecker.h
+    minecraft/mod/ModChecker.cpp
     minecraft/mod/ModDetails.h
     minecraft/mod/ModFolderModel.h
     minecraft/mod/ModFolderModel.cpp
@@ -1081,6 +1085,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ProfileSetupDialog.h
     ui/dialogs/CopyInstanceDialog.cpp
     ui/dialogs/CopyInstanceDialog.h
+    ui/dialogs/ModCheckDialog.cpp
+    ui/dialogs/ModCheckDialog.h
     ui/dialogs/CreateShortcutDialog.cpp
     ui/dialogs/CreateShortcutDialog.h
     ui/dialogs/CustomMessageBox.cpp

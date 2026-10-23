@@ -74,6 +74,7 @@ class ThemeManager;
 class IconTheme;
 class BaseInstance;
 class MinecraftInstance;
+class QWidget;
 
 class LogModel;
 
@@ -94,6 +95,12 @@ class Index;
 #undef APPLICATION_DYN
 #endif
 #define APPLICATION_DYN (dynamic_cast<Application*>(QCoreApplication::instance()))
+
+//! Extra, one-off launch behaviour that is not persisted in the instance settings.
+struct LaunchOptions {
+    //! Move the mods folder out of the way for this launch only.
+    bool safeMode = false;
+};
 
 class Application : public QApplication {
     Q_OBJECT
@@ -216,9 +223,15 @@ class Application : public QApplication {
                 LaunchMode mode = LaunchMode::Normal,
                 std::shared_ptr<MinecraftTarget> targetToJoin = nullptr,
                 shared_qobject_ptr<MinecraftAccount> accountToUse = nullptr,
-                const QString& offlineName = QString());
+                const QString& offlineName = QString(),
+                const LaunchOptions& options = {});
     bool kill(BaseInstance* instance);
     static void closeCurrentWindow();
+
+    //! Explain why one instance cannot run twice and offer to duplicate it for a parallel session.
+    void showParallelPlayHelp(MinecraftInstance* instance);
+    //! Ask for copy options and create a copy of `instance`. Returns true when a copy was created.
+    bool duplicateInstance(BaseInstance* instance, QWidget* parent);
 
    private slots:
     void on_windowClose();
@@ -230,6 +243,8 @@ class Application : public QApplication {
     bool createSetupWizard();
     void performMainStartupAction();
 
+    //! Run the pre-launch mod check. Returns false when the user cancelled the launch.
+    bool checkModsBeforeLaunch(MinecraftInstance* instance, QWidget* parent);
     // sets the fatal error message and m_status to Failed.
     void showFatalErrorMessage(const QString& title, const QString& content);
 

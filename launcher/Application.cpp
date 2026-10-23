@@ -44,7 +44,10 @@
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
+#include "InstanceCopyTask.h"
 #include "java/JavaInstallList.h"
+#include "minecraft/SafeMode.h"
+#include "minecraft/mod/ModChecker.h"
 #include "net/PasteUpload.h"
 #include "tasks/Task.h"
 #include "tools/GenericProfiler.h"
@@ -53,6 +56,8 @@
 #include "ui/ToolTipFilter.h"
 #include "ui/ViewLogWindow.h"
 
+#include "ui/dialogs/CopyInstanceDialog.h"
+#include "ui/dialogs/ModCheckDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/instanceview/AccessibleInstanceView.h"
 
@@ -90,6 +95,7 @@
 #include <mutex>
 
 #include <QAccessible>
+#include <QCheckBox>
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDir>
@@ -98,7 +104,9 @@
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QList>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
+#include <QPushButton>
 #include <QStringList>
 #include <QStringLiteral>
 #include <QStyleFactory>
@@ -736,6 +744,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("AutoCloseConsole", false);
         m_settings->registerSetting("ShowConsoleOnError", true);
         m_settings->registerSetting("LogPrePostOutput", true);
+        // Safe mode and mod checks
+        m_settings->registerSetting("CheckModsBeforeLaunch", true);
+        m_settings->registerSetting("SafeModeSkipConfirmation", false);
 
         // Window Size
         m_settings->registerSetting({ "LaunchMaximized", "MCWindowMaximize" }, false);
@@ -1400,6 +1411,13 @@ bool Application::event(QEvent* event)
 void Application::performMainStartupAction()
 {
     m_status = Application::Initialized;
+
+    // A crash (or a killed launcher) can leave an instance in safe mode with its mods folder
+    // renamed. Put those folders back before anything else can use the instance.
+    if (const int restored = SafeMode::recoverAll(); restored > 0) {
+        qInfo() << "Restored mods for" << restored << "instance(s) after an interrupted safe-mode launch";
+    }
+
     if (!m_instanceIdToLaunch.isEmpty()) {
         auto* inst = instances()->getInstanceById(m_instanceIdToLaunch);
         if (inst) {
@@ -1592,44 +1610,154 @@ bool Application::launch(MinecraftInstance* instance,
                          LaunchMode mode,
                          MinecraftTarget::Ptr targetToJoin,
                          MinecraftAccountPtr accountToUse,
-                         const QString& offlineName)
+                         const QString& offlineName,
+                         const LaunchOptions& options)
 {
     if (m_updateRunning) {
         qDebug() << "Cannot launch instances while an update is running. Please try again when updates are completed.";
-    } else if (instance->canLaunch()) {
-        QMutexLocker locker(&m_instanceExtrasMutex);
-        auto& extras = m_instanceExtras[instance->id()];
-        auto* window = extras.window;
-        if (window) {
-            if (!window->saveAll()) {
+        return false;
+    }
+
+    if (!instance->canLaunch()) {
+        if (instance->isRunning()) {
+            // The instance is already open; show its console instead of starting a second copy.
+            showInstanceWindow(instance, "console");
+        } else if (instance->canEdit()) {
+            showInstanceWindow(instance);
+        }
+        return false;
+    }
+
+    QMutexLocker locker(&m_instanceExtrasMutex);
+    auto& extras = m_instanceExtras[instance->id()];
+    auto* window = extras.window;
+
+    // Save pending instance settings before touching anything on disk.
+    if (window && !window->saveAll()) {
+        return false;
+    }
+    locker.unlock();
+
+    QWidget* parent = window != nullptr ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
+
+    // Pre-launch dialogs (safe-mode confirmation, mod check) need a window. Command-line launches
+    // (--launch) run unattended, so they skip the interactive checks.
+    if (options.safeMode && SafeMode::hasMods(instance)) {
+        if (!settings()->get("SafeModeSkipConfirmation").toBool()) {
+            QMessageBox box(QMessageBox::Question, tr("Launch in Safe Mode"),
+                            tr("\"%1\" will start without any mods for this launch only. Your mods folder is moved aside "
+                               "and restored when the game exits.\n\nIf the launcher or the game crashes, the mods are "
+                               "restored the next time the launcher starts.")
+                                .arg(instance->name()),
+                            QMessageBox::Yes | QMessageBox::Cancel, parent);
+            auto* doNotAsk = new QCheckBox(tr("Do not ask again"), &box);
+            box.setCheckBox(doNotAsk);
+            if (box.exec() != QMessageBox::Yes) {
                 return false;
             }
+            if (doNotAsk->isChecked()) {
+                settings()->set("SafeModeSkipConfirmation", true);
+            }
         }
-        auto& controller = extras.controller;
-        controller = std::make_unique<LaunchController>();
-        controller->setInstance(instance);
-        controller->setLaunchMode(mode);
-        controller->setProfiler(profilers().value(instance->settings()->get("Profiler").toString(), nullptr).get());
-        controller->setTargetToJoin(std::move(targetToJoin));
-        controller->setAccountToUse(std::move(accountToUse));
-        controller->setOfflineName(offlineName);
-        if (window) {
-            controller->setParentWidget(window);
-        } else if (m_mainWindow) {
-            controller->setParentWidget(m_mainWindow);
+
+        QString error;
+        if (!SafeMode::begin(instance, &error)) {
+            QMessageBox::critical(parent, tr("Could not enable Safe Mode"),
+                                  tr("The mods folder could not be moved aside, so the game was not started.\n\n%1").arg(error));
+            return false;
         }
-        connect(controller.get(), &LaunchController::finished, this, &Application::controllerFinished);
-        addRunningInstance();
-        QMetaObject::invokeMethod(controller.get(), &Task::start, Qt::QueuedConnection);
-        return true;
-    } else if (instance->isRunning()) {
+    } else if (!options.safeMode && parent != nullptr && !checkModsBeforeLaunch(instance, parent)) {
+        return false;
+    }
+
+    locker.relock();
+    auto& liveExtras = m_instanceExtras[instance->id()];
+    liveExtras.controller = std::make_unique<LaunchController>();
+    auto& controller = liveExtras.controller;
+    controller->setInstance(instance);
+    controller->setLaunchMode(mode);
+    controller->setProfiler(profilers().value(instance->settings()->get("Profiler").toString(), nullptr).get());
+    controller->setTargetToJoin(std::move(targetToJoin));
+    controller->setAccountToUse(std::move(accountToUse));
+    controller->setOfflineName(offlineName);
+    if (liveExtras.window) {
+        controller->setParentWidget(liveExtras.window);
+    } else if (m_mainWindow) {
+        controller->setParentWidget(m_mainWindow);
+    }
+    connect(controller.get(), &LaunchController::finished, this, &Application::controllerFinished);
+    addRunningInstance();
+    QMetaObject::invokeMethod(controller.get(), &Task::start, Qt::QueuedConnection);
+    return true;
+}
+
+void Application::showParallelPlayHelp(MinecraftInstance* instance)
+{
+    QWidget* parent = m_mainWindow != nullptr ? static_cast<QWidget*>(m_mainWindow) : QApplication::activeWindow();
+
+    QMessageBox box(QMessageBox::Information, tr("Instance already running"),
+                    tr("\"%1\" is already running. Minecraft keeps its options, logs and mod configurations in one game "
+                       "folder, so starting the same instance a second time would make the two copies overwrite each "
+                       "other — this is why only one account can play at a time.\n\nTo play with another account at the "
+                       "same time, duplicate the instance and launch the copy. The duplicate can share mods and assets "
+                       "with hard links, so it takes almost no extra disk space.")
+                        .arg(instance->name()),
+                    QMessageBox::NoButton, parent);
+    auto* consoleButton = box.addButton(tr("Open Console"), QMessageBox::AcceptRole);
+    auto* duplicateButton = box.addButton(tr("Duplicate Instance…"), QMessageBox::ActionRole);
+    box.addButton(QMessageBox::Cancel);
+    box.exec();
+
+    if (box.clickedButton() == consoleButton) {
         showInstanceWindow(instance, "console");
-        return true;
-    } else if (instance->canEdit()) {
-        showInstanceWindow(instance);
+    } else if (box.clickedButton() == duplicateButton) {
+        duplicateInstance(instance, parent);
+    }
+}
+
+bool Application::duplicateInstance(BaseInstance* instance, QWidget* parent)
+{
+    CopyInstanceDialog dialog(instance, parent);
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    auto* copyTask = new InstanceCopyTask(instance, dialog.getChosenOptions());
+    copyTask->setName(dialog.instName());
+    copyTask->setGroup(dialog.instGroup());
+    copyTask->setIcon(dialog.iconKey());
+
+    unique_qobject_ptr<Task> task(instances()->wrapInstanceTask(copyTask));
+    ProgressDialog progress(parent);
+    progress.execWithTask(task.get());
+
+    if (!task->wasSuccessful()) {
+        QMessageBox::critical(parent, tr("Could not duplicate the instance"),
+                              tr("The instance could not be copied.\n\n%1").arg(task->failReason()));
+        return false;
+    }
+    return true;
+}
+
+bool Application::checkModsBeforeLaunch(MinecraftInstance* instance, QWidget* parent)
+{
+    if (!settings()->get("CheckModsBeforeLaunch").toBool()) {
         return true;
     }
-    return false;
+
+    const auto issues = ModChecker::check(instance->modsRoot());
+    if (issues.isEmpty()) {
+        return true;
+    }
+
+    ModCheckDialog dialog(instance->modsRoot(), issues, ModCheckDialog::Mode::PreLaunch,
+                          settings()->get("CheckModsBeforeLaunch").toBool(), parent);
+    if (dialog.exec() != QDialog::Accepted) {
+        qInfo() << "Launch cancelled after the mod check found" << issues.size() << "issue(s)";
+        return false;
+    }
+    settings()->set("CheckModsBeforeLaunch", dialog.checkEveryLaunch());
+    return true;
 }
 
 bool Application::kill(BaseInstance* instance)
@@ -1698,6 +1826,15 @@ void Application::controllerFinished()
         return;
     }
     auto id = controller->id();
+
+    // Safe mode ends with the game process, no matter whether it exited cleanly, crashed or was
+    // killed. If the launcher dies first, the marker file is picked up on the next start.
+    if (auto* instance = controller->instance(); instance != nullptr) {
+        QString safeModeError;
+        if (SafeMode::isActive(instance) && !SafeMode::end(instance, &safeModeError)) {
+            qWarning() << "Could not restore mods after safe mode:" << safeModeError;
+        }
+    }
 
     QMutexLocker locker(&m_instanceExtrasMutex);
     auto& extras = m_instanceExtras.at(id);

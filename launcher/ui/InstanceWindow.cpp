@@ -143,9 +143,10 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         connect(m_instance, &BaseInstance::statusChanged, this, &InstanceWindow::on_instanceStatusChanged);
     }
 
-    // add ourself as the modpack page's instance window
+    // add ourself as the modpack page's instance window (servers have no modpack page)
     {
-        static_cast<ManagedPackPage*>(m_container->getPage("managed_pack"))->setInstanceWindow(this);
+        if (auto* packPage = m_container->getPage("managed_pack"))
+            static_cast<ManagedPackPage*>(packPage)->setInstanceWindow(this);
     }
 
     show();

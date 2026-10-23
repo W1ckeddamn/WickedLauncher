@@ -237,8 +237,8 @@ ModInfo parseForgeToml(const QByteArray& tomlData, const QString& file, bool neo
         parseDependencies(*array);
     } else if (const auto dependencyTable = dependencies.as_table(); dependencyTable != nullptr) {
         for (const auto& entry : *dependencyTable) {
-            if (const auto array = entry.second.as_array(); array != nullptr) {
-                parseDependencies(*array);
+            if (const auto entryArray = entry.second.as_array(); entryArray != nullptr) {
+                parseDependencies(*entryArray);
             }
         }
     }

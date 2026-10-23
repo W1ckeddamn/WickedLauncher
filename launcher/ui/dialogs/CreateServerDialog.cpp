@@ -129,7 +129,7 @@ ServerManager::Config CreateServerDialog::config() const
 
 void CreateServerDialog::loadVersions()
 {
-    QNetworkRequest request(QUrl(s_manifestUrl));
+    QNetworkRequest request{ QUrl(s_manifestUrl) };
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
 
@@ -144,7 +144,7 @@ void CreateServerDialog::onVersionsLoaded()
     if (reply == nullptr) {
         return;
     }
-    const auto data = reply->readAll();
+    const auto payload = reply->readAll();
     const auto error = reply->errorString();
     const auto errorCode = reply->error();
     reply->deleteLater();
@@ -156,7 +156,7 @@ void CreateServerDialog::onVersionsLoaded()
         return;
     }
 
-    const auto document = QJsonDocument::fromJson(data);
+    const auto document = QJsonDocument::fromJson(payload);
     const auto versions = document.object().value(QStringLiteral("versions")).toArray();
     if (versions.isEmpty()) {
         m_statusLabel->setText(tr("Mojang returned an empty version list. Type a Minecraft version by hand."));

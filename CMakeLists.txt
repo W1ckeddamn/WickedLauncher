@@ -180,8 +180,10 @@ endif()
 ##################################### Set Application options #####################################
 
 ######## Set URLs ########
-set(Launcher_NEWS_RSS_URL "https://prismlauncher.org/feed/feed.xml" CACHE STRING "URL to fetch Prism Launcher's news RSS feed from.")
-set(Launcher_NEWS_OPEN_URL "https://prismlauncher.org/news" CACHE STRING "URL that gets opened when the user clicks 'More News'")
+# GitHub's releases.atom is a valid Atom feed (same <entry> structure NewsChecker expects),
+# so the fork can use its own releases as the news source without hosting a separate feed.
+set(Launcher_NEWS_RSS_URL "https://github.com/W1ckeddamn/WickedLauncher/releases.atom" CACHE STRING "URL to fetch Wicked Launcher's news Atom feed from.")
+set(Launcher_NEWS_OPEN_URL "https://github.com/W1ckeddamn/WickedLauncher/releases" CACHE STRING "URL that gets opened when the user clicks 'More News'")
 set(Launcher_WIKI_URL "https://prismlauncher.org/wiki/" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
 set(Launcher_HELP_URL "https://prismlauncher.org/wiki/help-pages/%1" CACHE STRING "URL (with arg %1 to be substituted with page-id) that gets opened when the user requests help in a dialog window")
 set(Launcher_LOGIN_CALLBACK_URL "https://prismlauncher.org/successful-login" CACHE STRING "URL that gets opened when the user successfully logins.")

@@ -3,7 +3,7 @@
 
 #include <news/NewsEntry.h>
 
-// Entries as served by prismlauncher.org/feed/feed.xml and GitHub's releases.atom
+// Entries as served by static-site Atom feeds and GitHub's releases.atom (used by Wicked Launcher)
 class NewsEntryTest : public QObject {
     Q_OBJECT
 

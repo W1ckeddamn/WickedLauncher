@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="org.prismlauncher.PrismLauncher.logo-darkmode.svg" type="image/svg+xml">
-    <img src="org.prismlauncher.PrismLauncher.logo.svg" alt="Wicked Launcher" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="io.github.w1ckeddamn.WickedLauncher.logo-darkmode.svg" type="image/svg+xml">
+    <img src="io.github.w1ckeddamn.WickedLauncher.logo.svg" alt="Wicked Launcher" width="420">
   </picture>
 </p>
 
@@ -16,7 +16,7 @@ It covers:
 - Desktop integration: `.desktop` entry, AppStream metadata, MIME types, and man page
 - Platform packaging: Windows resource/manifest files and macOS icon assets
 
-> **Compatibility note:** the internal application ID and common name remain `org.prismlauncher.PrismLauncher` / `PrismLauncher`. Only the user-facing display name is **Wicked Launcher**. This keeps existing installations, update channels, desktop files, and packaging paths working.
+> **Compatibility note:** the application ID is `io.github.w1ckeddamn.WickedLauncher` and the binary/common name is `WickedLauncher`. The legacy `prismlauncher://` URL scheme remains registered because it is the Microsoft login redirect URI and is used by older import links.
 
 ---
 
@@ -26,23 +26,23 @@ The visual identity is a faceted **W crystal** mark. Light and dark variants are
 
 | File | Purpose |
 | :--- | :--- |
-| `org.prismlauncher.PrismLauncher.svg` | Square application icon (transparent background) |
-| `org.prismlauncher.PrismLauncher.Source.svg` | Editable source for the square application icon |
-| `org.prismlauncher.PrismLauncher.bigsur.svg` | macOS application icon with squircle background |
-| `org.prismlauncher.PrismLauncher.logo.svg` | Horizontal wordmark for light backgrounds |
-| `org.prismlauncher.PrismLauncher.logo-darkmode.svg` | Horizontal wordmark for dark backgrounds |
-| `org.prismlauncher.PrismLauncher.logo.source.svg` | Editable source for the horizontal wordmark |
-| `org.prismlauncher.PrismLauncher.Social.svg` | Social banner with light and dark panels |
-| `prismlauncher-monochrome.Source.svg` | Monochrome banner with light and dark panels |
-| `PrismLauncher.icon/` | macOS Icon Composer assets (`icon.json`, `Assets/block.svg`, `Assets/rainbow.svg`) |
+| `io.github.w1ckeddamn.WickedLauncher.svg` | Square application icon (transparent background) |
+| `io.github.w1ckeddamn.WickedLauncher.Source.svg` | Editable source for the square application icon |
+| `io.github.w1ckeddamn.WickedLauncher.bigsur.svg` | macOS application icon with squircle background |
+| `io.github.w1ckeddamn.WickedLauncher.logo.svg` | Horizontal wordmark for light backgrounds |
+| `io.github.w1ckeddamn.WickedLauncher.logo-darkmode.svg` | Horizontal wordmark for dark backgrounds |
+| `io.github.w1ckeddamn.WickedLauncher.logo.source.svg` | Editable source for the horizontal wordmark |
+| `io.github.w1ckeddamn.WickedLauncher.Social.svg` | Social banner with light and dark panels |
+| `wickedlauncher-monochrome.Source.svg` | Monochrome banner with light and dark panels |
+| `WickedLauncher.icon/` | macOS Icon Composer assets (`icon.json`, `Assets/block.svg`, `Assets/rainbow.svg`) |
 
 Generated binary icons:
 
 | File | Purpose |
 | :--- | :--- |
-| `org.prismlauncher.PrismLauncher_256.png` | 256×256 PNG master used by packaging |
-| `prismlauncher.ico` | Windows multi-resolution icon (16–256 px) |
-| `prismlauncher.icns` | macOS multi-resolution icon (16–1024 px) |
+| `io.github.w1ckeddamn.WickedLauncher_256.png` | 256×256 PNG master used by packaging |
+| `wickedlauncher.ico` | Windows multi-resolution icon (16–256 px) |
+| `wickedlauncher.icns` | macOS multi-resolution icon (16–1024 px) |
 
 The launcher theme uses a copy of the square icon:
 
@@ -77,13 +77,13 @@ Do not edit the generated `.png`, `.ico`, or `.icns` files by hand. If the tools
 
 | File | Purpose |
 | :--- | :--- |
-| `org.prismlauncher.PrismLauncher.desktop.in` | Linux desktop entry template |
-| `org.prismlauncher.PrismLauncher.metainfo.xml.in` | AppStream metadata template |
-| `org.prismlauncher.PrismLauncher.mime.xml` | MIME type associations |
-| `org.prismlauncher.PrismLauncher.6.scd.in` | Man page source |
-| `prismlauncher.rc.in` | Windows resource definition |
-| `prismlauncher.manifest.in` | Windows application manifest |
-| `prismlauncher.qrc.in` | Qt resource file for the application icon |
+| `io.github.w1ckeddamn.WickedLauncher.desktop.in` | Linux desktop entry template |
+| `io.github.w1ckeddamn.WickedLauncher.metainfo.xml.in` | AppStream metadata template |
+| `io.github.w1ckeddamn.WickedLauncher.mime.xml` | MIME type associations |
+| `wickedlauncher.6.scd.in` | Man page source |
+| `wickedlauncher.rc.in` | Windows resource definition |
+| `wickedlauncher.manifest.in` | Windows application manifest |
+| `wickedlauncher.qrc.in` | Qt resource file for the application icon |
 | `win_install.nsi.in` | NSIS installer script |
 
 The build system configures these templates and copies the icon assets into the build directory. See [`CMakeLists.txt`](CMakeLists.txt) for the exact variables and output paths.

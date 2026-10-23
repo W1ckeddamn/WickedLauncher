@@ -465,7 +465,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     m_dataPath = dataPath;
 
     /*
-     * Establish the mechanism for communication with an already running PrismLauncher that uses the same data path.
+     * Establish the mechanism for communication with an already running Wicked Launcher that uses the same data path.
      * If there is one, tell it what the user actually wanted to do and exit.
      * We want to initialize this before logging to avoid messing with the log of a potential already running copy.
      */
@@ -604,9 +604,16 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     }
 
     {
+        // Migrate data from the Prism Launcher data directory this fork used before rebranding,
+        // then fall back to the older PolyMC/MultiMC locations.
         auto migrated = handleDataMigration(
-            dataPath, FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), "../../PolyMC"), "PolyMC",
-            "polymc.cfg");
+            dataPath, FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), "../../PrismLauncher"),
+            "PrismLauncher", "prismlauncher.cfg");
+        if (!migrated) {
+            migrated = handleDataMigration(dataPath,
+                                          FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), "../../PolyMC"),
+                                          "PolyMC", "polymc.cfg");
+        }
         if (!migrated) {
             handleDataMigration(dataPath,
                                 FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), "../../multimc"),
@@ -661,8 +668,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     // Initialize application settings
     {
-        // Provide a fallback for migration from PolyMC
-        m_settings.reset(new INISettingsObject({ BuildConfig.LAUNCHER_CONFIGFILE, "polymc.cfg", "multimc.cfg" }, this));
+        // Provide a fallback for migration from Prism Launcher, PolyMC and MultiMC
+        m_settings.reset(new INISettingsObject({ BuildConfig.LAUNCHER_CONFIGFILE, "prismlauncher.cfg", "polymc.cfg", "multimc.cfg" }, this));
 
         // Theming
         m_settings->registerSetting("IconTheme", QString());
@@ -1516,7 +1523,9 @@ void Application::messageReceived(const QByteArray& message)
         bool isLoginAtempt = false;
         if (command == "import") {
             QString url = received.args["url"];
-            isLoginAtempt = !url.isEmpty() && normalizeImportUrl(url).scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME;
+            // The Microsoft login redirect uses its own scheme (Launcher_MSA_REDIRECT_URL),
+            // which is intentionally independent from the launcher's own URL scheme.
+            isLoginAtempt = !url.isEmpty() && normalizeImportUrl(url).scheme() == QUrl(BuildConfig.MSA_REDIRECT_URL).scheme();
         }
         if (!isLoginAtempt) {
             qDebug() << "Received message" << message << "while still initializing. It will be ignored.";

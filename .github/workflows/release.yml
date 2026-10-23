@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: "true"
-          path: "PrismLauncher-source"
+          path: "WickedLauncher-source"
       - name: Download artifacts
         uses: actions/download-artifact@v8
       - name: Grab and store version
@@ -43,15 +43,15 @@ jobs:
           echo "VERSION=$tag_name" >> $GITHUB_ENV
       - name: Package artifacts properly
         run: |
-          mv ${{ github.workspace }}/PrismLauncher-source WickedLauncher-${{ env.VERSION }}
+          mv ${{ github.workspace }}/WickedLauncher-source WickedLauncher-${{ env.VERSION }}
           mv WickedLauncher-Linux-Qt6-Portable*/WickedLauncher-portable.tar.gz WickedLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
           mv WickedLauncher-Linux-aarch64-Qt6-Portable*/WickedLauncher-portable.tar.gz WickedLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
           mv WickedLauncher-*.AppImage/WickedLauncher-*-x86_64.AppImage WickedLauncher-Linux-x86_64.AppImage
           mv WickedLauncher-*.AppImage.zsync/WickedLauncher-*-x86_64.AppImage.zsync WickedLauncher-Linux-x86_64.AppImage.zsync
           mv WickedLauncher-*.AppImage/WickedLauncher-*-aarch64.AppImage WickedLauncher-Linux-aarch64.AppImage
           mv WickedLauncher-*.AppImage.zsync/WickedLauncher-*-aarch64.AppImage.zsync WickedLauncher-Linux-aarch64.AppImage.zsync
-          mv WickedLauncher-macOS*/PrismLauncher.zip WickedLauncher-macOS-${{ env.VERSION }}.zip
-          mv WickedLauncher-macOS*/PrismLauncher.dmg WickedLauncher-macOS-${{ env.VERSION }}.dmg
+          mv WickedLauncher-macOS*/WickedLauncher.zip WickedLauncher-macOS-${{ env.VERSION }}.zip
+          mv WickedLauncher-macOS*/WickedLauncher.dmg WickedLauncher-macOS-${{ env.VERSION }}.dmg
 
           tar --exclude='.git' -czf WickedLauncher-${{ env.VERSION }}.tar.gz WickedLauncher-${{ env.VERSION }}
 

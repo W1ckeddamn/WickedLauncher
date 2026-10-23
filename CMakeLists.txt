@@ -282,6 +282,11 @@ endif()
 # https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use
 set(Launcher_MSA_CLIENT_ID "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
 
+# Redirect URI used for Microsoft authentication. It MUST match the redirect URI registered
+# for the client ID above (the shared Prism Launcher app registers the prismlauncher:// scheme),
+# otherwise signing in silently breaks. Change this only after registering your own Azure app.
+set(Launcher_MSA_REDIRECT_URL "prismlauncher://oauth/microsoft" CACHE STRING "Redirect URI used for Microsoft authentication")
+
 # By using this key in your builds you accept the terms and conditions laid down in
 # https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions
 # NOTE: CurseForge requires you to change this if you make any kind of derivative work.
@@ -392,7 +397,7 @@ include(ECMQtDeclareLoggingCategory)
 
 ####################################### Program Info #######################################
 
-set(Launcher_APP_BINARY_NAME "prismlauncher" CACHE STRING "Name of the Launcher binary")
+set(Launcher_APP_BINARY_NAME "wickedlauncher" CACHE STRING "Name of the Launcher binary")
 add_subdirectory(program_info)
 
 ####################################### Install layout #######################################

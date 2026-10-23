@@ -38,7 +38,7 @@ let
 in
 
 stdenv.mkDerivation {
-  pname = "prismlauncher-unwrapped";
+  pname = "wickedlauncher-unwrapped";
   version = "12.0-unstable-${date}";
 
   src = lib.fileset.toSource {
@@ -64,7 +64,7 @@ stdenv.mkDerivation {
   # Ensure that instance shortcuts point to our final wrapper, rather than this unwrapped version
   postPatch = ''
     substituteInPlace launcher/minecraft/ShortcutUtils.cpp \
-      --replace-fail 'QApplication::applicationFilePath()' 'QProcessEnvironment::systemEnvironment().value("NIX_LAUNCHER_WRAPPER", "${placeholder "out"}/bin/prismlauncher")'
+      --replace-fail 'QApplication::applicationFilePath()' 'QProcessEnvironment::systemEnvironment().value("NIX_LAUNCHER_WRAPPER", "${placeholder "out"}/bin/wickedlauncher")'
   '';
 
   nativeBuildInputs = [
@@ -113,13 +113,13 @@ stdenv.mkDerivation {
       their own mods, texture packs, saves, etc) and helps you manage them and
       their associated options with a simple interface.
     '';
-    homepage = "https://prismlauncher.org/";
+    homepage = "https://github.com/W1ckeddamn/WickedLauncher";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [
       Scrumplex
       getchoo
     ];
-    mainProgram = "prismlauncher";
+    mainProgram = "wickedlauncher";
     platforms = lib.platforms.linux ++ lib.platforms.darwin;
   };
 }

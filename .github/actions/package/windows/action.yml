@@ -1,5 +1,5 @@
 name: Package for Windows
-description: Create a Windows package for Prism Launcher
+description: Create a Windows package for Wicked Launcher
 
 inputs:
   version:
@@ -152,9 +152,6 @@ runs:
         cd ${{ env.INSTALL_DIR }}
         makensis -NOCD "${{ github.workspace }}/${{ env.BUILD_DIR }}/program_info/win_install.nsi"
         cd ${{ github.workspace }}
-        if (Test-Path "${{ github.workspace }}\PrismLauncher-Setup.exe") {
-          Move-Item -Path "${{ github.workspace }}\PrismLauncher-Setup.exe" -Destination "${{ github.workspace }}\WickedLauncher-Setup.exe" -Force
-        }
 
     - name: Sign installer
       if: ${{ env.CI_HAS_ACCESS_TO_AZURE != '' && inputs.azure-client-id != '' }}

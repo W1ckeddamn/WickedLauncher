@@ -152,6 +152,8 @@ class Config {
      * Client ID you can get from Microsoft Identity Platform when you register an application
      */
     QString MSA_CLIENT_ID;
+    /// Redirect URI for Microsoft authentication (must match the Azure app registration)
+    QString MSA_REDIRECT_URL;
 
     /**
      * Client API key for CurseForge

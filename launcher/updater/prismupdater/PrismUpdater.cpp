@@ -694,7 +694,7 @@ QList<GitHubReleaseAsset> PrismUpdaterApp::validReleaseArtifacts(const GitHubRel
         auto assetName = asset.name.toLower();
         auto [platform, platformQtVer] = StringUtils::splitFirst(BuildConfig.BUILD_ARTIFACT.toLower(), "-qt");
         auto systemIsArm = QSysInfo::buildCpuArchitecture().contains("arm64");
-        // Linux ARM packages are named "aarch64" (e.g. PrismLauncher-Linux-aarch64-Qt6-Portable-*.tar.gz)
+        // Linux ARM packages are named "aarch64" (e.g. WickedLauncher-Linux-aarch64-Qt6-Portable-*.tar.gz)
         auto assetIsArm = assetName.contains("arm64") || assetName.contains("aarch64");
         auto assetIsArchive = assetName.endsWith(".zip") || assetName.endsWith(".tar.gz");
 
@@ -1029,13 +1029,14 @@ void PrismUpdaterApp::backupAppDir()
     if (fileList.isEmpty()) {
         // best guess
         if (BuildConfig.BUILD_ARTIFACT.toLower().contains("linux")) {
-            fileList.append({ "PrismLauncher", "bin", "share", "lib" });
+            fileList.append({ BuildConfig.LAUNCHER_APP_BINARY_NAME, "bin", "share", "lib" });
         } else {  // windows by process of elimination
+            const auto exe = BuildConfig.LAUNCHER_APP_BINARY_NAME + ".exe";
             fileList.append({
                 "jars",
-                "prismlauncher.exe",
-                "prismlauncher_filelink.exe",
-                "prismlauncher_updater.exe",
+                exe,
+                BuildConfig.LAUNCHER_APP_BINARY_NAME + "_filelink.exe",
+                BuildConfig.LAUNCHER_APP_BINARY_NAME + "_updater.exe",
                 "qtlogging.ini",
                 "imageformats",
                 "iconengines",

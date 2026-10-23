@@ -398,11 +398,12 @@ Section "@Launcher_DisplayName@"
   WriteRegStr HKCU Software\Classes\modrinth "URL Protocol" ""
   WriteRegStr HKCU Software\Classes\modrinth\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 
-  ; Write the URL Handler into registry for prismlauncher
+  ; Write the launcher's own URL handler into the registry (imports, links, etc.)
   WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@ "URL Protocol" ""
   WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 
-  ; Write the URL Handler into registry for prismlauncher import
+  ; Keep the legacy prismlauncher scheme registered: it is the Microsoft login redirect URI
+  ; (see Launcher_MSA_REDIRECT_URL) and is used by older import links.
   WriteRegStr HKCU Software\Classes\prismlauncher "URL Protocol" ""
   WriteRegStr HKCU Software\Classes\prismlauncher\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 

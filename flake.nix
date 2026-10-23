@@ -92,7 +92,7 @@
           packages' = self.packages.${system};
 
           welcomeMessage = ''
-            Welcome to the Prism Launcher repository! 🌈
+            Welcome to the Wicked Launcher repository! 🌈
 
             We just set some things up for you. To get building, you can run:
 
@@ -102,21 +102,20 @@
             $ ninjaInstallPhase
             ```
 
-            Feel free to ask any questions in our Discord server or Matrix space:
-              - https://prismlauncher.org/discord
-              - https://matrix.to/#/#prismlauncher:matrix.org
+            Feel free to ask any questions on our issue tracker:
+              - https://github.com/W1ckeddamn/WickedLauncher/issues
 
             And thanks for helping out :)
           '';
 
           # Re-use our package wrapper to wrap our development environment
-          qt-wrapper-env = packages'.prismlauncher.overrideAttrs (old: {
+          qt-wrapper-env = packages'.wickedlauncher.overrideAttrs (old: {
             name = "qt-wrapper-env";
 
             # Required to use script-based makeWrapper below
             strictDeps = true;
 
-            # We don't need/want the unwrapped Prism package
+            # We don't need/want the unwrapped Wicked package
             paths = [ ];
 
             nativeBuildInputs = old.nativeBuildInputs or [ ] ++ [
@@ -134,9 +133,9 @@
 
         {
           default = mkShell {
-            name = "prism-launcher";
+            name = "wicked-launcher";
 
-            inputsFrom = [ packages'.prismlauncher-unwrapped ];
+            inputsFrom = [ packages'.wickedlauncher-unwrapped ];
 
             packages = [
               pkgs.ccache
@@ -162,7 +161,7 @@
             ];
 
             cmakeBuildType = "Debug";
-            cmakeFlags = [ "-GNinja" ] ++ packages'.prismlauncher-unwrapped.cmakeFlags;
+            cmakeFlags = [ "-GNinja" ] ++ packages'.wickedlauncher-unwrapped.cmakeFlags;
             dontFixCmake = true;
 
             shellHook = ''
@@ -193,7 +192,7 @@
         in
 
         {
-          prismlauncher-unwrapped = prev.callPackage ./nix/unwrapped.nix {
+          wickedlauncher-unwrapped = prev.callPackage ./nix/unwrapped.nix {
             inherit (llvm) stdenv;
             inherit
               libnbtplusplus
@@ -201,7 +200,7 @@
               ;
           };
 
-          prismlauncher = final.callPackage ./nix/wrapper.nix { };
+          wickedlauncher = final.callPackage ./nix/wrapper.nix { };
         };
 
       packages = forAllSystems (
@@ -211,12 +210,12 @@
           pkgs = nixpkgsFor.${system};
 
           # Build a scope from our overlay
-          prismPackages = lib.makeScope pkgs.newScope (final: self.overlays.default final pkgs);
+          wickedPackages = lib.makeScope pkgs.newScope (final: self.overlays.default final pkgs);
 
           # Grab our packages from it and set the default
           packages = {
-            inherit (prismPackages) prismlauncher-unwrapped prismlauncher;
-            default = prismPackages.prismlauncher;
+            inherit (wickedPackages) wickedlauncher-unwrapped wickedlauncher;
+            default = wickedPackages.wickedlauncher;
           };
         in
 
@@ -234,11 +233,11 @@
         in
 
         {
-          prismlauncher-debug = packages'.prismlauncher.override {
-            prismlauncher-unwrapped = legacyPackages'.prismlauncher-unwrapped-debug;
+          wickedlauncher-debug = packages'.wickedlauncher.override {
+            wickedlauncher-unwrapped = legacyPackages'.wickedlauncher-unwrapped-debug;
           };
 
-          prismlauncher-unwrapped-debug = packages'.prismlauncher-unwrapped.overrideAttrs {
+          wickedlauncher-unwrapped-debug = packages'.wickedlauncher-unwrapped.overrideAttrs {
             cmakeBuildType = "Debug";
             dontStrip = true;
           };

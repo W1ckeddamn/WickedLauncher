@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg" type="image/svg+xml">
-    <img src="program_info/org.prismlauncher.PrismLauncher.logo.svg" alt="Wicked Launcher" width="460">
+    <source media="(prefers-color-scheme: dark)" srcset="program_info/io.github.w1ckeddamn.WickedLauncher.logo-darkmode.svg" type="image/svg+xml">
+    <img src="program_info/io.github.w1ckeddamn.WickedLauncher.logo.svg" alt="Wicked Launcher" width="460">
   </picture>
 </p>
 
@@ -155,13 +155,13 @@ cmake --build --preset windows_mingw
 
 Wicked Launcher uses a faceted **W crystal** mark with dedicated light and dark variants. Branding assets live in [`program_info/`](program_info/README.md):
 
-- Square application icon: [`org.prismlauncher.PrismLauncher.svg`](program_info/org.prismlauncher.PrismLauncher.svg)
-- macOS application icon: [`org.prismlauncher.PrismLauncher.bigsur.svg`](program_info/org.prismlauncher.PrismLauncher.bigsur.svg)
-- Horizontal wordmark: [`logo.svg`](program_info/org.prismlauncher.PrismLauncher.logo.svg) / [`logo-darkmode.svg`](program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg)
-- Social banner: [`Social.svg`](program_info/org.prismlauncher.PrismLauncher.Social.svg)
-- Generated binaries: `prismlauncher.ico`, `prismlauncher.icns`, and `org.prismlauncher.PrismLauncher_256.png`
+- Square application icon: [`io.github.w1ckeddamn.WickedLauncher.svg`](program_info/io.github.w1ckeddamn.WickedLauncher.svg)
+- macOS application icon: [`io.github.w1ckeddamn.WickedLauncher.bigsur.svg`](program_info/io.github.w1ckeddamn.WickedLauncher.bigsur.svg)
+- Horizontal wordmark: [`logo.svg`](program_info/io.github.w1ckeddamn.WickedLauncher.logo.svg) / [`logo-darkmode.svg`](program_info/io.github.w1ckeddamn.WickedLauncher.logo-darkmode.svg)
+- Social banner: [`Social.svg`](program_info/io.github.w1ckeddamn.WickedLauncher.Social.svg)
+- Generated binaries: `wickedlauncher.ico`, `wickedlauncher.icns`, and `io.github.w1ckeddamn.WickedLauncher_256.png`
 
-The internal application ID remains `org.prismlauncher.PrismLauncher` for compatibility with existing installations, update channels, and desktop integration. The user-facing name is **Wicked Launcher**.
+The application ID is `io.github.w1ckeddamn.WickedLauncher`. The legacy `prismlauncher://` URL scheme stays registered because it is the Microsoft login redirect URI and is used by older import links.
 
 ---
 

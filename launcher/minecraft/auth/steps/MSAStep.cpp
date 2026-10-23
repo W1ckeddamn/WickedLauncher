@@ -48,19 +48,28 @@
 #include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QUrl>
+
+// Scheme of the redirect URI registered for Microsoft login. It is tied to the Azure app
+// registration (see Launcher_MSA_REDIRECT_URL) and is deliberately independent from the
+// launcher's own URL scheme, so that rebranding the binary does not break signing in.
+static QString msaScheme()
+{
+    return QUrl(BuildConfig.MSA_REDIRECT_URL).scheme();
+}
 
 bool isSchemeHandlerRegistered()
 {
 #ifdef Q_OS_LINUX
     QProcess process;
-    process.start("xdg-mime", { "query", "default", "x-scheme-handler/" + BuildConfig.LAUNCHER_APP_BINARY_NAME });
+    process.start("xdg-mime", { "query", "default", "x-scheme-handler/" + msaScheme() });
     process.waitForFinished();
     QString output = process.readAllStandardOutput().trimmed();
 
     return output.contains(APPLICATION->desktopFileName());
 
 #elif defined(Q_OS_WIN)
-    QString regPath = QString("HKEY_CURRENT_USER\\Software\\Classes\\%1").arg(BuildConfig.LAUNCHER_APP_BINARY_NAME);
+    QString regPath = QString("HKEY_CURRENT_USER\\Software\\Classes\\%1").arg(msaScheme());
     QSettings settings(regPath, QSettings::NativeFormat);
 
     const QString registeredRunCommand = settings.value("shell/open/command/.").toString().replace("\\", "/");
@@ -81,7 +90,7 @@ class CustomOAuthOobReplyHandler : public QOAuthOobReplyHandler {
     {
         disconnect(APPLICATION, &Application::oauthReplyRecieved, this, &QOAuthOobReplyHandler::callbackReceived);
     }
-    QString callback() const override { return BuildConfig.LAUNCHER_APP_BINARY_NAME + "://oauth/microsoft"; }
+    QString callback() const override { return BuildConfig.MSA_REDIRECT_URL; }
 
    protected:
     void networkReplyFinished(QNetworkReply* reply) override

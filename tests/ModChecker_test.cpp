@@ -47,6 +47,11 @@ bool hasSummary(const QList<ModChecker::Issue>& issues, const QString& needle)
     return std::any_of(issues.begin(), issues.end(), [&needle](const auto& issue) { return issue.summary.contains(needle); });
 }
 
+bool hasDetails(const QList<ModChecker::Issue>& issues, const QString& needle)
+{
+    return std::any_of(issues.begin(), issues.end(), [&needle](const auto& issue) { return issue.details.contains(needle); });
+}
+
 int countSeverity(const QList<ModChecker::Issue>& issues, ModChecker::Issue::Severity severity)
 {
     return static_cast<int>(
@@ -207,7 +212,8 @@ void ModCheckerTest::declaredConflict()
     const auto a = ModChecker::parseFabric(s_fabricA, QStringLiteral("a.jar"));
     const QByteArray bad = R"({ "schemaVersion": 1, "id": "bad_mod", "version": "0.5" })";
     const auto issues = ModChecker::analyze({ a, ModChecker::parseFabric(bad, QStringLiteral("bad.jar")) });
-    QVERIFY(hasSummary(issues, QStringLiteral("declares a conflict")));
+    // The summary groups the pair; the reason is in details.
+    QVERIFY(hasDetails(issues, QStringLiteral("declares a conflict")));
 }
 
 void ModCheckerTest::scanDirectory()

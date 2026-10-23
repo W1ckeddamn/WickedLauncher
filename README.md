@@ -5,8 +5,6 @@
   </picture>
 </p>
 
-<h1 align="center">Wicked Launcher</h1>
-
 <p align="center">
   A customized, high-performance fork of Prism Launcher with enhanced offline play, resource management, and diagnostics.
 </p>

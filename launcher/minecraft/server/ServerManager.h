@@ -59,7 +59,7 @@ class ServerManager : public QObject {
     //! Default folder and Java/memory take from the instance settings.
     static Config defaultConfig(MinecraftInstance* instance);
     //! Read <instanceRoot>/wicked-server.json, keeping `fallback` values for missing fields.
-    static Config loadConfig(const QString& configPath, const Config& fallback = {});
+    static Config loadConfig(const QString& configPath, const Config& fallback);
     static bool saveConfig(const QString& configPath, const Config& config, QString* error = nullptr);
 
     //! Fill in jar/kind/version/eula and warnings for an existing folder.

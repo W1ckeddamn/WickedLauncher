@@ -52,7 +52,7 @@ class ServerManagerTest : public QObject {
         QString error;
         QVERIFY2(ServerManager::saveConfig(path, config, &error), qPrintable(error));
 
-        const auto loaded = ServerManager::loadConfig(path);
+        const auto loaded = ServerManager::loadConfig(path, {});
         QCOMPARE(loaded.directory, config.directory);
         QCOMPARE(loaded.jar, config.jar);
         QCOMPARE(loaded.argsFile, config.argsFile);

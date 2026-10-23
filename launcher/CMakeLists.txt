@@ -296,6 +296,10 @@ set(MINECRAFT_SOURCES
     minecraft/MinecraftInstance.h
     minecraft/SafeMode.cpp
     minecraft/SafeMode.h
+    minecraft/server/ServerInstallTask.cpp
+    minecraft/server/ServerInstallTask.h
+    minecraft/server/ServerManager.cpp
+    minecraft/server/ServerManager.h
     minecraft/LaunchProfile.cpp
     minecraft/LaunchProfile.h
     minecraft/Component.cpp
@@ -964,6 +968,8 @@ SET(LAUNCHER_SOURCES
     ui/pages/instance/ServersPage.h
     ui/pages/instance/WorldListPage.cpp
     ui/pages/instance/WorldListPage.h
+    ui/pages/instance/ServerPage.cpp
+    ui/pages/instance/ServerPage.h
     ui/pages/instance/McClient.cpp
     ui/pages/instance/McClient.h
     ui/pages/instance/McResolver.cpp
@@ -1087,6 +1093,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/CopyInstanceDialog.h
     ui/dialogs/ModCheckDialog.cpp
     ui/dialogs/ModCheckDialog.h
+    ui/dialogs/CreateServerDialog.cpp
+    ui/dialogs/CreateServerDialog.h
     ui/dialogs/CreateShortcutDialog.cpp
     ui/dialogs/CreateShortcutDialog.h
     ui/dialogs/CustomMessageBox.cpp

@@ -13,6 +13,7 @@
 #include "ui/pages/instance/ResourcePackPage.h"
 #include "ui/pages/instance/ScreenshotsPage.h"
 #include "ui/pages/instance/ServersPage.h"
+#include "ui/pages/instance/ServerPage.h"
 #include "ui/pages/instance/ShaderPackPage.h"
 #include "ui/pages/instance/TexturePackPage.h"
 #include "ui/pages/instance/VersionPage.h"
@@ -48,6 +49,7 @@ class InstancePageProvider : protected QObject, public BasePageProvider {
         values.append(new NotesPage(inst));
         values.append(new WorldListPage(inst, inst->worldList()));
         values.append(new ServersPage(inst));
+        values.append(new ServerPage(inst));
         values.append(new ScreenshotsPage(FS::PathCombine(inst->gameRoot(), "screenshots")));
         values.append(new InstanceSettingsPage(inst));
         values.append(new OtherLogsPage("logs", tr("Other Logs"), "Other-Logs", inst));

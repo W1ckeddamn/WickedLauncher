@@ -87,7 +87,6 @@ class CustomPage : public QWidget, public BasePage {
     bool m_initialized = false;
     NewInstanceDialog* m_dialog = nullptr;
     Ui::CustomPage* m_ui = nullptr;
-    bool m_versionSetByUser = false;
     BaseVersion::Ptr m_selectedVersion;
     BaseVersion::Ptr m_selectedLoaderVersion;
     QString m_selectedLoader;

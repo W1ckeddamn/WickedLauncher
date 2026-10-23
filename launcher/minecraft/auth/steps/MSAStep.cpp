@@ -53,7 +53,7 @@
 // Scheme of the redirect URI registered for Microsoft login. It is tied to the Azure app
 // registration (see Launcher_MSA_REDIRECT_URL) and is deliberately independent from the
 // launcher's own URL scheme, so that rebranding the binary does not break signing in.
-static QString msaScheme()
+[[maybe_unused]] static QString msaScheme()
 {
     return QUrl(BuildConfig.MSA_REDIRECT_URL).scheme();
 }

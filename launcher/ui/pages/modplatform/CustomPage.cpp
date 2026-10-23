@@ -226,13 +226,30 @@ void CustomPage::suggestCurrent()
     }
 
     // There isn't a selected version if the version list is empty
+    QString suggestedName = m_selectedVersion->descriptor();
+    VanillaCreationTask* task = nullptr;
     if (m_ui->loaderVersionList->selectedVersion() == nullptr) {
-        m_dialog->setSuggestedPack(m_selectedVersion->descriptor(), new VanillaCreationTask(m_selectedVersion));
+        task = new VanillaCreationTask(m_selectedVersion);
     } else {
-        QString suggestedName = QString("%1 %2").arg(m_selectedVersion->descriptor(), selectedLoaderName());
-        m_dialog->setSuggestedPack(suggestedName, new VanillaCreationTask(m_selectedVersion, m_selectedLoader, m_selectedLoaderVersion));
+        suggestedName = QString("%1 %2").arg(m_selectedVersion->descriptor(), selectedLoaderName());
+        task = new VanillaCreationTask(m_selectedVersion, m_selectedLoader, m_selectedLoaderVersion);
     }
-    m_dialog->setSuggestedIcon("default");
+    if (m_serverOnly)
+        suggestedName = tr("%1 Server").arg(suggestedName);
+    task->setServerOnly(m_serverOnly);
+    m_dialog->setSuggestedPack(suggestedName, task);
+    m_dialog->setSuggestedIcon(m_serverOnly ? QStringLiteral("server") : QStringLiteral("default"));
+}
+
+void CustomPage::setServerOnly(bool serverOnly)
+{
+    m_serverOnly = serverOnly;
+    suggestCurrent();
+}
+
+ServerCustomPage::ServerCustomPage(NewInstanceDialog* dialog, QWidget* parent) : CustomPage(dialog, parent)
+{
+    setServerOnly(true);
 }
 
 void CustomPage::setSelectedVersion(BaseVersion::Ptr version)

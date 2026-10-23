@@ -425,6 +425,12 @@ void MinecraftInstance::populateLaunchMenu(QMenu* menu)
     }
 }
 
+bool MinecraftInstance::canLaunch() const
+{
+    // A dedicated server instance is controlled from its server page.
+    return !isServerOnly() && BaseInstance::canLaunch();
+}
+
 QString MinecraftInstance::gameRoot() const
 {
     QFileInfo mcDir(FS::PathCombine(instanceRoot(), "minecraft"));

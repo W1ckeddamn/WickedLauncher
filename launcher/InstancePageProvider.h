@@ -31,6 +31,11 @@ class InstancePageProvider : protected QObject, public BasePageProvider {
     virtual QList<BasePage*> getPages() override
     {
         QList<BasePage*> values;
+        if (inst->isServerOnly()) {
+            values.append(new ServerPage(inst));
+            values.append(new VersionPage(inst));
+            return values;
+        }
         values.append(new LogPage(inst));
         values.append(new VersionPage(inst));
         values.append(ManagedPackPage::createPage(inst));
@@ -49,14 +54,18 @@ class InstancePageProvider : protected QObject, public BasePageProvider {
         values.append(new NotesPage(inst));
         values.append(new WorldListPage(inst, inst->worldList()));
         values.append(new ServersPage(inst));
-        values.append(new ServerPage(inst));
         values.append(new ScreenshotsPage(FS::PathCombine(inst->gameRoot(), "screenshots")));
         values.append(new InstanceSettingsPage(inst));
         values.append(new OtherLogsPage("logs", tr("Other Logs"), "Other-Logs", inst));
         return values;
     }
 
-    virtual QString dialogTitle() override { return tr("Edit Instance (%1)").arg(inst->name()); }
+    virtual QString dialogTitle() override
+    {
+        if (inst->isServerOnly())
+            return tr("Edit Server (%1)").arg(inst->name());
+        return tr("Edit Instance (%1)").arg(inst->name());
+    }
 
    protected:
     MinecraftInstance* inst;

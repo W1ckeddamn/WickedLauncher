@@ -106,6 +106,12 @@ BaseInstance::BaseInstance(SettingsObject* globalSettings, std::unique_ptr<Setti
         m_settings->registerSetting("InstanceType", "");
     }
 
+    // A dedicated server instance reuses the instance machinery for its version, Java and
+    // memory settings, but it is never launched as a game client.
+    if (!m_settings->getSetting("ServerOnly")) {
+        m_settings->registerSetting("ServerOnly", false);
+    }
+
     // Custom Commands
     auto commandSetting = m_settings->registerSetting({ "OverrideCommands", "OverrideLaunchCmd" }, false);
     m_settings->registerOverride(globalSettings->getSetting("PreLoadCommand"), commandSetting);
@@ -351,6 +357,16 @@ void BaseInstance::resetTimePlayed()
 QString BaseInstance::instanceType() const
 {
     return m_settings->get("InstanceType").toString();
+}
+
+bool BaseInstance::isServerOnly() const
+{
+    return m_settings->get("ServerOnly").toBool();
+}
+
+void BaseInstance::setServerOnly(bool serverOnly)
+{
+    m_settings->set("ServerOnly", serverOnly);
 }
 
 QString BaseInstance::instanceRoot() const

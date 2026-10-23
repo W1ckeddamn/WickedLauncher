@@ -203,6 +203,7 @@ QList<BasePage*> NewInstanceDialog::getPages()
     m_importPage = new ImportPage(this);
 
     pages.append(new CustomPage(this));
+    pages.append(new ServerCustomPage(this));
     pages.append(m_importPage);
     pages.append(new AtlPage(this));
     pages.append(new FlamePage(this));

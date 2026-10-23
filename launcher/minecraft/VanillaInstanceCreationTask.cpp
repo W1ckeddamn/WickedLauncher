@@ -28,9 +28,17 @@ void VanillaCreationTask::executeTask()
         }
 
         m_instance->setName(name());
-        m_instance->setIconKey(m_instIcon);
+        const bool defaultIcon = m_instIcon.isEmpty() || m_instIcon == QStringLiteral("default");
+        m_instance->setIconKey((m_serverOnly && defaultIcon) ? QStringLiteral("server") : m_instIcon);
+        m_instance->setServerOnly(m_serverOnly);
 
         components->saveNow();
+    }
+
+    if (m_serverOnly) {
+        // A dedicated server gets its jar from the server page; client game files are not needed.
+        emitSucceeded();
+        return;
     }
 
     downloadFiles(m_instance.get());

@@ -70,6 +70,10 @@ class CustomPage : public QWidget, public BasePage {
     void setSelectedVersion(BaseVersion::Ptr version);
     void setSelectedLoaderVersion(BaseVersion::Ptr version);
 
+   protected:
+    /// When set, the instance created from this page is a dedicated server.
+    void setServerOnly(bool serverOnly);
+
    private slots:
     void filterChanged();
     void loaderFilterChanged();
@@ -87,4 +91,17 @@ class CustomPage : public QWidget, public BasePage {
     BaseVersion::Ptr m_selectedVersion;
     BaseVersion::Ptr m_selectedLoaderVersion;
     QString m_selectedLoader;
+    bool m_serverOnly = false;
+};
+
+/// Same version/loader picker as CustomPage, but creates a dedicated server instance.
+class ServerCustomPage final : public CustomPage {
+    Q_OBJECT
+
+   public:
+    explicit ServerCustomPage(NewInstanceDialog* dialog, QWidget* parent = nullptr);
+
+    QString displayName() const override { return tr("Server"); }
+    QIcon icon() const override { return QIcon::fromTheme(QStringLiteral("server")); }
+    QString id() const override { return QStringLiteral("server"); }
 };

@@ -125,6 +125,10 @@ class BaseInstance : public QObject {
     /// get the type of this instance
     QString instanceType() const;
 
+    /// Whether this instance represents a dedicated server rather than a game client.
+    bool isServerOnly() const;
+    void setServerOnly(bool serverOnly);
+
     /// Path to the instance's root directory.
     QString instanceRoot() const;
 

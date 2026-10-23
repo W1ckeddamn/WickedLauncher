@@ -98,6 +98,9 @@ class MinecraftInstance : public BaseInstance {
     // Path to the instance's minecraft directory.
     QString gameRoot() const override;
 
+    // Dedicated server instances are started from their server page, never as a game client.
+    bool canLaunch() const override;
+
     // Path to the instance's minecraft bin directory.
     QString binRoot() const;
 

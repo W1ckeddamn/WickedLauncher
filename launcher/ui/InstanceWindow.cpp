@@ -162,8 +162,9 @@ void InstanceWindow::on_instanceStatusChanged(BaseInstance::Status, BaseInstance
 void InstanceWindow::updateButtons()
 {
     const bool running = m_instance->isRunning();
+    const bool serverOnly = m_instance->isServerOnly();
 
-    m_launchButton->setVisible(!running);
+    m_launchButton->setVisible(!running && !serverOnly);
     m_restartButton->setVisible(running);
 
     m_launchButton->setEnabled(m_instance->canLaunch());

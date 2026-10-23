@@ -13,6 +13,9 @@ class VanillaCreationTask final : public InstanceTask {
 
     void executeTask() override;
 
+    /// Create a dedicated server instance (never launched as a game client).
+    void setServerOnly(bool serverOnly) { m_serverOnly = serverOnly; }
+
    private:
     std::unique_ptr<MinecraftInstance> m_instance;
 
@@ -22,4 +25,5 @@ class VanillaCreationTask final : public InstanceTask {
     bool m_usingLoader = false;
     QString m_loader;
     BaseVersion::Ptr m_loaderVersion;
+    bool m_serverOnly = false;
 };

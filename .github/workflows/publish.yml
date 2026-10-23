@@ -1,5 +1,9 @@
 name: Publish
 
+# Publishing to winget is opt-in: it needs a package that already exists in
+# microsoft/winget-pkgs and a WINGET_TOKEN secret. Set the repository variable
+# WINGET_PUBLISH=true to enable it. The trigger stays on `release` because the
+# action below reads the release event.
 on:
   release:
     types: [ released ]
@@ -9,6 +13,7 @@ permissions: {}
 jobs:
   winget:
     name: Winget
+    if: ${{ vars.WINGET_PUBLISH == 'true' }}
 
     permissions:
       contents: read
@@ -20,7 +25,7 @@ jobs:
         # @Octol1ttle: Pinned to a commit because no release has been published that works on ubuntu-slim
         uses: vedantmgoyal2009/winget-releaser@7bd472be23763def6e16bd06cc8b1cdfab0e2fd5 # docs: add description to inputs (#335)
         with:
-          identifier: W1ckeddamn.WickedLauncher
+          identifier: WickedLauncher.WickedLauncher
           version: ${{ github.event.release.tag_name }}
           installers-regex: 'WickedLauncher-Windows-MSVC(:?-arm64|-Legacy)?-Setup-.+\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}

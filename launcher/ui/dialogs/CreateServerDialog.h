@@ -40,6 +40,7 @@ class CreateServerDialog : public QDialog {
     void loadVersions();
     void onVersionsLoaded();
     void browseDirectory();
+    void updateState();
 
    private:
     MinecraftInstance* m_instance = nullptr;
@@ -48,7 +49,8 @@ class CreateServerDialog : public QDialog {
     QComboBox* m_versionCombo = nullptr;
     QLineEdit* m_directoryEdit = nullptr;
     QSpinBox* m_memorySpin = nullptr;
-    QLineEdit* m_javaEdit = nullptr;
+    QLabel* m_descriptionLabel = nullptr;
+    QLabel* m_summaryLabel = nullptr;
     QLabel* m_statusLabel = nullptr;
     QPushButton* m_okButton = nullptr;
     QNetworkReply* m_versionsReply = nullptr;

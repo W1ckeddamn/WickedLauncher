@@ -17,6 +17,7 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QSpinBox;
+class QStackedWidget;
 class MinecraftInstance;
 
 /**
@@ -52,26 +53,42 @@ class ServerPage : public QWidget, public BasePage {
     void startServer();
     void stopServer();
     void sendCommand();
+    void copyAddress();
+    void clearConsole();
     void onOutput(const QString& text);
     void onRunningChanged(bool running);
     void refresh();
 
    private:
     void setupUi();
+    QWidget* buildHeader();
+    QWidget* buildEmptyPage();
+    QWidget* buildSettings();
+    QWidget* buildConsole();
     void collectConfig();
     void persist();
     void appendConsole(const QString& text);
+    QString listenAddress() const;
 
     MinecraftInstance* m_instance = nullptr;
     ServerManager* m_manager = nullptr;
 
-    QLineEdit* m_directoryEdit = nullptr;
-    QLabel* m_infoLabel = nullptr;
+    QStackedWidget* m_stack = nullptr;
+    QWidget* m_emptyPage = nullptr;
+    QWidget* m_settingsPage = nullptr;
+
+    QLabel* m_stateLabel = nullptr;
+    QLabel* m_identityLabel = nullptr;
+    QLabel* m_addressLabel = nullptr;
+    QLabel* m_warningLabel = nullptr;
+
     QPushButton* m_createButton = nullptr;
     QPushButton* m_importButton = nullptr;
     QPushButton* m_propertiesButton = nullptr;
-    QPushButton* m_browseButton = nullptr;
     QPushButton* m_openFolderButton = nullptr;
+
+    QLineEdit* m_directoryEdit = nullptr;
+    QPushButton* m_browseButton = nullptr;
 
     QLineEdit* m_javaEdit = nullptr;
     QPushButton* m_javaBrowseButton = nullptr;
@@ -82,9 +99,10 @@ class ServerPage : public QWidget, public BasePage {
     QPushButton* m_startButton = nullptr;
     QPushButton* m_stopButton = nullptr;
     QPushButton* m_killButton = nullptr;
-    QLabel* m_stateLabel = nullptr;
 
     QPlainTextEdit* m_console = nullptr;
     QLineEdit* m_commandEdit = nullptr;
     QPushButton* m_sendButton = nullptr;
+    QPushButton* m_copyAddressButton = nullptr;
+    QPushButton* m_clearConsoleButton = nullptr;
 };

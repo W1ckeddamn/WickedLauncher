@@ -7,6 +7,7 @@
 #include "ServerPage.h"
 
 #include <QCheckBox>
+#include <QClipboard>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDialog>
@@ -15,9 +16,12 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFont>
 #include <QFontDatabase>
 #include <QFormLayout>
+#include <QFrame>
 #include <QGroupBox>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
@@ -29,6 +33,7 @@
 #include <QSaveFile>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QTextCursor>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -64,37 +69,140 @@ void ServerPage::setupUi()
 {
     auto* layout = new QVBoxLayout(this);
 
-    auto* folderGroup = new QGroupBox(tr("Server folder"), this);
-    auto* folderLayout = new QVBoxLayout(folderGroup);
+    layout->addWidget(buildHeader());
 
-    auto* folderRow = new QHBoxLayout;
+    auto* toolbar = new QHBoxLayout;
+    m_createButton = new QPushButton(tr("Create Server…"), this);
+    m_createButton->setToolTip(tr("Download a new server (Vanilla, Paper, Purpur or Fabric)"));
+    m_importButton = new QPushButton(tr("Import Server…"), this);
+    m_importButton->setToolTip(tr("Use an existing server folder, for example a Forge or NeoForge server"));
+    m_openFolderButton = new QPushButton(tr("Open Folder"), this);
+    m_propertiesButton = new QPushButton(tr("server.properties…"), this);
+    toolbar->addWidget(m_createButton);
+    toolbar->addWidget(m_importButton);
+    toolbar->addSpacing(12);
+    toolbar->addWidget(m_openFolderButton);
+    toolbar->addWidget(m_propertiesButton);
+    toolbar->addStretch(1);
+    layout->addLayout(toolbar);
+
+    m_stack = new QStackedWidget(this);
+    m_emptyPage = buildEmptyPage();
+    m_settingsPage = buildSettings();
+    m_stack->addWidget(m_emptyPage);
+    m_stack->addWidget(m_settingsPage);
+    layout->addWidget(m_stack, 1);
+
+    connect(m_createButton, &QPushButton::clicked, this, &ServerPage::createServer);
+    connect(m_importButton, &QPushButton::clicked, this, &ServerPage::importServer);
+    connect(m_openFolderButton, &QPushButton::clicked, this, &ServerPage::openServerFolder);
+    connect(m_propertiesButton, &QPushButton::clicked, this, &ServerPage::editProperties);
+}
+
+QWidget* ServerPage::buildHeader()
+{
+    auto* header = new QFrame(this);
+    header->setFrameShape(QFrame::StyledPanel);
+    auto* layout = new QVBoxLayout(header);
+
+    auto* topRow = new QHBoxLayout;
+    m_stateLabel = new QLabel(header);
+    auto font = m_stateLabel->font();
+    font.setBold(true);
+    if (font.pointSizeF() > 0) {
+        font.setPointSizeF(font.pointSizeF() * 1.2);
+    }
+    m_stateLabel->setFont(font);
+    m_identityLabel = new QLabel(header);
+    topRow->addWidget(m_stateLabel);
+    topRow->addWidget(m_identityLabel);
+    topRow->addStretch(1);
+
+    m_startButton = new QPushButton(tr("Start"), header);
+    m_stopButton = new QPushButton(tr("Stop"), header);
+    m_killButton = new QPushButton(tr("Kill"), header);
+    m_killButton->setToolTip(tr("Kill the server process without saving the world"));
+    topRow->addWidget(m_startButton);
+    topRow->addWidget(m_stopButton);
+    topRow->addWidget(m_killButton);
+    layout->addLayout(topRow);
+
+    auto* addressRow = new QHBoxLayout;
+    auto* addressTitle = new QLabel(tr("Address:"), header);
+    m_addressLabel = new QLabel(header);
+    m_addressLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_copyAddressButton = new QPushButton(tr("Copy"), header);
+    m_copyAddressButton->setToolTip(tr("Copy the address players can connect to"));
+    addressRow->addWidget(addressTitle);
+    addressRow->addWidget(m_addressLabel);
+    addressRow->addWidget(m_copyAddressButton);
+    addressRow->addStretch(1);
+    layout->addLayout(addressRow);
+
+    m_warningLabel = new QLabel(header);
+    m_warningLabel->setWordWrap(true);
+    m_warningLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    layout->addWidget(m_warningLabel);
+
+    connect(m_startButton, &QPushButton::clicked, this, &ServerPage::startServer);
+    connect(m_stopButton, &QPushButton::clicked, this, &ServerPage::stopServer);
+    connect(m_killButton, &QPushButton::clicked, this, [this] { m_manager->kill(); });
+    connect(m_copyAddressButton, &QPushButton::clicked, this, &ServerPage::copyAddress);
+
+    return header;
+}
+
+QWidget* ServerPage::buildEmptyPage()
+{
+    auto* page = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->addStretch(1);
+
+    const auto pixmap = QIcon::fromTheme(QStringLiteral("server")).pixmap(64, 64);
+    if (!pixmap.isNull()) {
+        auto* icon = new QLabel(page);
+        icon->setPixmap(pixmap);
+        icon->setAlignment(Qt::AlignCenter);
+        layout->addWidget(icon);
+    }
+
+    auto* title = new QLabel(tr("No server yet"), page);
+    auto titleFont = title->font();
+    titleFont.setBold(true);
+    if (titleFont.pointSizeF() > 0) {
+        titleFont.setPointSizeF(titleFont.pointSizeF() * 1.3);
+    }
+    title->setFont(titleFont);
+    title->setAlignment(Qt::AlignCenter);
+    layout->addWidget(title);
+
+    auto* hint = new QLabel(tr("Use <b>Create Server</b> to download a Vanilla, Paper, Purpur or Fabric server, or "
+                               "<b>Import Server</b> to use a server folder you already have."),
+                            page);
+    hint->setWordWrap(true);
+    hint->setAlignment(Qt::AlignCenter);
+    layout->addWidget(hint);
+
+    layout->addStretch(2);
+    return page;
+}
+
+QWidget* ServerPage::buildSettings()
+{
+    auto* page = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    auto* folderGroup = new QGroupBox(tr("Server folder"), page);
+    auto* folderRow = new QHBoxLayout(folderGroup);
     m_directoryEdit = new QLineEdit(folderGroup);
     m_directoryEdit->setPlaceholderText(tr("Choose or create a server folder"));
     m_browseButton = new QPushButton(tr("Browse…"), folderGroup);
-    m_openFolderButton = new QPushButton(tr("Open Folder"), folderGroup);
     folderRow->addWidget(m_directoryEdit, 1);
     folderRow->addWidget(m_browseButton);
-    folderRow->addWidget(m_openFolderButton);
-    folderLayout->addLayout(folderRow);
-
-    auto* actionRow = new QHBoxLayout;
-    m_createButton = new QPushButton(tr("Create Server…"), folderGroup);
-    m_importButton = new QPushButton(tr("Import Existing Server…"), folderGroup);
-    m_propertiesButton = new QPushButton(tr("server.properties…"), folderGroup);
-    actionRow->addWidget(m_createButton);
-    actionRow->addWidget(m_importButton);
-    actionRow->addWidget(m_propertiesButton);
-    actionRow->addStretch(1);
-    folderLayout->addLayout(actionRow);
-
-    m_infoLabel = new QLabel(folderGroup);
-    m_infoLabel->setWordWrap(true);
-    m_infoLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    folderLayout->addWidget(m_infoLabel);
-
     layout->addWidget(folderGroup);
 
-    auto* launchGroup = new QGroupBox(tr("Launch settings"), this);
+    auto* launchGroup = new QGroupBox(tr("Java and launch options"), page);
     auto* form = new QFormLayout(launchGroup);
 
     auto* javaRow = new QHBoxLayout;
@@ -125,56 +233,17 @@ void ServerPage::setupUi()
     form->addRow(tr("EULA"), eulaRow);
 
     layout->addWidget(launchGroup);
+    layout->addWidget(buildConsole(), 1);
 
-    auto* controlsRow = new QHBoxLayout;
-    m_startButton = new QPushButton(tr("Start Server"), this);
-    m_stopButton = new QPushButton(tr("Stop"), this);
-    m_killButton = new QPushButton(tr("Kill"), this);
-    m_stateLabel = new QLabel(tr("Server is stopped."), this);
-    controlsRow->addWidget(m_startButton);
-    controlsRow->addWidget(m_stopButton);
-    controlsRow->addWidget(m_killButton);
-    controlsRow->addSpacing(12);
-    controlsRow->addWidget(m_stateLabel, 1);
-    layout->addLayout(controlsRow);
-
-    auto* consoleGroup = new QGroupBox(tr("Console"), this);
-    auto* consoleLayout = new QVBoxLayout(consoleGroup);
-    m_console = new QPlainTextEdit(consoleGroup);
-    m_console->setReadOnly(true);
-    m_console->setMaximumBlockCount(5000);
-    m_console->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    m_console->setPlaceholderText(tr("Server output appears here."));
-    consoleLayout->addWidget(m_console, 1);
-
-    auto* commandRow = new QHBoxLayout;
-    m_commandEdit = new QLineEdit(consoleGroup);
-    m_commandEdit->setPlaceholderText(tr("Type a server command and press Enter, e.g. say hello"));
-    m_sendButton = new QPushButton(tr("Send"), consoleGroup);
-    commandRow->addWidget(m_commandEdit, 1);
-    commandRow->addWidget(m_sendButton);
-    consoleLayout->addLayout(commandRow);
-
-    layout->addWidget(consoleGroup, 1);
-
-    auto* note = new QLabel(tr("The server runs as a child process of the launcher. Closing this instance window or the "
-                               "launcher stops it, and its console is not kept between sessions."),
-                            this);
+    auto* note = new QLabel(tr("The server runs as a child process of the launcher. Closing this instance window stops it, "
+                               "and its console is not kept between sessions."),
+                            page);
     note->setWordWrap(true);
     layout->addWidget(note);
 
     connect(m_browseButton, &QPushButton::clicked, this, &ServerPage::browseServerFolder);
-    connect(m_openFolderButton, &QPushButton::clicked, this, &ServerPage::openServerFolder);
-    connect(m_createButton, &QPushButton::clicked, this, &ServerPage::createServer);
-    connect(m_importButton, &QPushButton::clicked, this, &ServerPage::importServer);
-    connect(m_propertiesButton, &QPushButton::clicked, this, &ServerPage::editProperties);
     connect(m_javaBrowseButton, &QPushButton::clicked, this, &ServerPage::browseJava);
     connect(m_eulaCheck, &QCheckBox::toggled, this, &ServerPage::onEulaToggled);
-    connect(m_startButton, &QPushButton::clicked, this, &ServerPage::startServer);
-    connect(m_stopButton, &QPushButton::clicked, this, &ServerPage::stopServer);
-    connect(m_killButton, &QPushButton::clicked, this, [this] { m_manager->kill(); });
-    connect(m_sendButton, &QPushButton::clicked, this, &ServerPage::sendCommand);
-    connect(m_commandEdit, &QLineEdit::returnPressed, this, &ServerPage::sendCommand);
     connect(m_directoryEdit, &QLineEdit::editingFinished, this, [this] {
         collectConfig();
         persist();
@@ -192,6 +261,66 @@ void ServerPage::setupUi()
         collectConfig();
         persist();
     });
+
+    return page;
+}
+
+QWidget* ServerPage::buildConsole()
+{
+    auto* group = new QGroupBox(tr("Console"), this);
+    auto* layout = new QVBoxLayout(group);
+
+    auto* toolRow = new QHBoxLayout;
+    toolRow->addStretch(1);
+    m_clearConsoleButton = new QPushButton(tr("Clear"), group);
+    toolRow->addWidget(m_clearConsoleButton);
+    layout->addLayout(toolRow);
+
+    m_console = new QPlainTextEdit(group);
+    m_console->setReadOnly(true);
+    m_console->setMaximumBlockCount(5000);
+    m_console->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    m_console->setPlaceholderText(tr("Server output appears here."));
+    layout->addWidget(m_console, 1);
+
+    auto* commandRow = new QHBoxLayout;
+    m_commandEdit = new QLineEdit(group);
+    m_commandEdit->setPlaceholderText(tr("Type a server command and press Enter, e.g. say hello"));
+    m_sendButton = new QPushButton(tr("Send"), group);
+    commandRow->addWidget(m_commandEdit, 1);
+    commandRow->addWidget(m_sendButton);
+    layout->addLayout(commandRow);
+
+    connect(m_clearConsoleButton, &QPushButton::clicked, this, &ServerPage::clearConsole);
+    connect(m_sendButton, &QPushButton::clicked, this, &ServerPage::sendCommand);
+    connect(m_commandEdit, &QLineEdit::returnPressed, this, &ServerPage::sendCommand);
+
+    return group;
+}
+
+QString ServerPage::listenAddress() const
+{
+    QString port = QStringLiteral("25565");
+    const auto directory = m_manager->config().directory;
+    if (directory.isEmpty()) {
+        return {};
+    }
+
+    QFile file(FS::PathCombine(directory, QStringLiteral("server.properties")));
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const auto lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+        for (const auto& line : lines) {
+            const auto entry = line.trimmed();
+            if (entry.startsWith(QStringLiteral("server-port="))) {
+                const auto value = entry.section(QLatin1Char('='), 1).trimmed();
+                if (!value.isEmpty()) {
+                    port = value;
+                }
+                break;
+            }
+        }
+    }
+    return QStringLiteral("localhost:%1").arg(port);
 }
 
 void ServerPage::refresh()
@@ -199,6 +328,7 @@ void ServerPage::refresh()
     const auto& config = m_manager->config();
     const auto info = ServerManager::inspect(config);
     const bool running = m_manager->isRunning();
+    const bool hasFolder = !config.directory.isEmpty() && QFileInfo::exists(config.directory);
 
     m_directoryEdit->setText(QDir::toNativeSeparators(config.directory));
     m_javaEdit->setText(QDir::toNativeSeparators(config.javaPath));
@@ -213,31 +343,44 @@ void ServerPage::refresh()
     }
     m_extraArgsEdit->setText(quotedArguments.join(QLatin1Char(' ')));
 
-    if (!info.valid) {
-        m_infoLabel->setText(info.warnings.isEmpty() ? tr("No server is configured for this instance yet.")
-                                                     : info.warnings.join(QLatin1Char('\n')));
-    } else {
-        const auto version = info.config.minecraftVersion.isEmpty() ? tr("version unknown") : info.config.minecraftVersion;
-        const auto source = info.config.jar.isEmpty() ? tr("Forge arguments") : info.config.jar;
-        auto text = tr("%1 %2 — %3").arg(ServerManager::kindName(info.config.kind), version, source);
-        if (!info.warnings.isEmpty()) {
-            text.append(QLatin1Char('\n'));
-            text.append(info.warnings.join(QLatin1Char('\n')));
-        }
-        m_infoLabel->setText(text);
-    }
-
     {
         const QSignalBlocker blocker(m_eulaCheck);
         m_eulaCheck->setChecked(info.eulaAccepted);
     }
 
+    if (info.valid) {
+        const auto version = info.config.minecraftVersion.isEmpty() ? tr("version unknown") : info.config.minecraftVersion;
+        m_identityLabel->setText(tr("%1 %2").arg(ServerManager::kindName(info.config.kind), version));
+        m_identityLabel->setToolTip(info.config.jar.isEmpty() ? tr("Launched through the argument file")
+                                                              : tr("Server jar: %1").arg(info.config.jar));
+    } else if (hasFolder) {
+        m_identityLabel->setText(tr("No server files found"));
+        m_identityLabel->setToolTip({});
+    } else {
+        m_identityLabel->setText(tr("No server configured"));
+        m_identityLabel->setToolTip({});
+    }
+
+    m_addressLabel->setText(hasFolder ? listenAddress() : QString());
+    m_copyAddressButton->setEnabled(hasFolder);
+    m_warningLabel->setText(hasFolder ? info.warnings.join(QLatin1Char('\n')) : QString());
+    m_warningLabel->setVisible(hasFolder && !info.warnings.isEmpty());
+
+    m_stack->setCurrentWidget(hasFolder ? m_settingsPage : m_emptyPage);
+
+    m_stateLabel->setText(running ? tr("Running") : tr("Stopped"));
     m_startButton->setEnabled(info.valid && !running);
     m_stopButton->setEnabled(running);
     m_killButton->setEnabled(running);
+    m_createButton->setEnabled(!running);
+    m_importButton->setEnabled(!running);
+    m_openFolderButton->setEnabled(hasFolder);
+    m_propertiesButton->setEnabled(hasFolder);
+    m_directoryEdit->setEnabled(!running);
+    m_browseButton->setEnabled(!running);
+    m_eulaCheck->setEnabled(!running);
     m_sendButton->setEnabled(running);
     m_commandEdit->setEnabled(running);
-    m_stateLabel->setText(running ? tr("Server is running.") : tr("Server is stopped."));
 }
 
 void ServerPage::collectConfig()
@@ -399,6 +542,7 @@ void ServerPage::editProperties()
         QMessageBox::warning(this, tr("Could not save server.properties"), output.errorString());
         return;
     }
+    refresh();
     appendConsole(tr("[launcher] Saved server.properties"));
 }
 
@@ -517,6 +661,19 @@ void ServerPage::sendCommand()
     m_commandEdit->clear();
 }
 
+void ServerPage::copyAddress()
+{
+    const auto address = listenAddress();
+    if (!address.isEmpty()) {
+        QGuiApplication::clipboard()->setText(address);
+    }
+}
+
+void ServerPage::clearConsole()
+{
+    m_console->clear();
+}
+
 void ServerPage::onOutput(const QString& text)
 {
     appendConsole(text);
@@ -524,12 +681,8 @@ void ServerPage::onOutput(const QString& text)
 
 void ServerPage::onRunningChanged(bool running)
 {
-    m_startButton->setEnabled(!running);
-    m_stopButton->setEnabled(running);
-    m_killButton->setEnabled(running);
-    m_sendButton->setEnabled(running);
-    m_commandEdit->setEnabled(running);
-    m_stateLabel->setText(running ? tr("Server is running.") : tr("Server is stopped."));
+    Q_UNUSED(running)
+    refresh();
 }
 
 void ServerPage::appendConsole(const QString& text)

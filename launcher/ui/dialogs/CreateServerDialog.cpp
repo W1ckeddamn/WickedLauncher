@@ -32,13 +32,30 @@
 
 namespace {
 const QString s_manifestUrl = QStringLiteral("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
+
+QString describeKind(ServerManager::Kind kind)
+{
+    switch (kind) {
+        case ServerManager::Kind::Vanilla:
+            return CreateServerDialog::tr("Official Mojang server. No plugins or mods.");
+        case ServerManager::Kind::Paper:
+            return CreateServerDialog::tr("High-performance server with plugin support. A good default for most servers.");
+        case ServerManager::Kind::Purpur:
+            return CreateServerDialog::tr("Paper-based server with extra gameplay settings.");
+        case ServerManager::Kind::Fabric:
+            return CreateServerDialog::tr("Modded server using the Fabric loader.");
+        default:
+            break;
+    }
+    return {};
+}
 }  // namespace
 
 CreateServerDialog::CreateServerDialog(MinecraftInstance* instance, QWidget* parent) : QDialog(parent), m_instance(instance)
 {
     setWindowTitle(tr("Create a server"));
     setModal(true);
-    resize(520, 360);
+    resize(560, 420);
 
     const auto defaults = ServerManager::defaultConfig(instance);
 
@@ -47,10 +64,14 @@ CreateServerDialog::CreateServerDialog(MinecraftInstance* instance, QWidget* par
 
     m_kindCombo = new QComboBox(this);
     m_kindCombo->addItem(tr("Vanilla"), static_cast<int>(ServerManager::Kind::Vanilla));
-    m_kindCombo->addItem(tr("Fabric"), static_cast<int>(ServerManager::Kind::Fabric));
-    m_kindCombo->addItem(tr("Paper"), static_cast<int>(ServerManager::Kind::Paper));
+    m_kindCombo->addItem(tr("Paper (recommended)"), static_cast<int>(ServerManager::Kind::Paper));
     m_kindCombo->addItem(tr("Purpur"), static_cast<int>(ServerManager::Kind::Purpur));
+    m_kindCombo->addItem(tr("Fabric"), static_cast<int>(ServerManager::Kind::Fabric));
     form->addRow(tr("Server type"), m_kindCombo);
+
+    m_descriptionLabel = new QLabel(this);
+    m_descriptionLabel->setWordWrap(true);
+    form->addRow(QString(), m_descriptionLabel);
 
     m_versionCombo = new QComboBox(this);
     m_versionCombo->setEditable(true);
@@ -71,13 +92,11 @@ CreateServerDialog::CreateServerDialog(MinecraftInstance* instance, QWidget* par
     m_memorySpin->setValue(qMax(512, defaults.memoryMb));
     form->addRow(tr("Memory"), m_memorySpin);
 
-    auto* javaRow = new QHBoxLayout;
-    m_javaEdit = new QLineEdit(defaults.javaPath, this);
-    m_javaEdit->setPlaceholderText(tr("Use the launcher's Java"));
-    javaRow->addWidget(m_javaEdit, 1);
-    form->addRow(tr("Java"), javaRow);
-
     layout->addLayout(form);
+
+    m_summaryLabel = new QLabel(this);
+    m_summaryLabel->setWordWrap(true);
+    layout->addWidget(m_summaryLabel);
 
     m_statusLabel = new QLabel(tr("Forge and NeoForge servers need their official installer; create one there and use "
                                   "\"Import Server\" instead."),
@@ -95,9 +114,11 @@ CreateServerDialog::CreateServerDialog(MinecraftInstance* instance, QWidget* par
     connect(buttons, &QDialogButtonBox::accepted, this, &CreateServerDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(browse, &QPushButton::clicked, this, &CreateServerDialog::browseDirectory);
-    connect(m_versionCombo, &QComboBox::currentTextChanged, this, [this] { m_okButton->setEnabled(!config().minecraftVersion.isEmpty()); });
-    connect(m_directoryEdit, &QLineEdit::textChanged, this, [this] { m_okButton->setEnabled(!config().minecraftVersion.isEmpty()); });
+    connect(m_kindCombo, &QComboBox::currentIndexChanged, this, &CreateServerDialog::updateState);
+    connect(m_versionCombo, &QComboBox::currentTextChanged, this, &CreateServerDialog::updateState);
+    connect(m_directoryEdit, &QLineEdit::textChanged, this, &CreateServerDialog::updateState);
 
+    updateState();
     loadVersions();
 }
 
@@ -123,8 +144,28 @@ ServerManager::Config CreateServerDialog::config() const
         config.directory = QDir::cleanPath(QDir::fromNativeSeparators(config.directory));
     }
     config.memoryMb = m_memorySpin->value();
-    config.javaPath = m_javaEdit->text().trimmed();
     return config;
+}
+
+void CreateServerDialog::updateState()
+{
+    m_descriptionLabel->setText(describeKind(static_cast<ServerManager::Kind>(m_kindCombo->currentData().toInt())));
+
+    const auto selected = config();
+    const bool ready = !selected.minecraftVersion.isEmpty() && !selected.directory.isEmpty();
+    m_okButton->setEnabled(ready);
+    if (!ready) {
+        m_summaryLabel->clear();
+        return;
+    }
+
+    auto summary = tr("%1 %2 will be downloaded to %3.")
+                       .arg(ServerManager::kindName(selected.kind), selected.minecraftVersion,
+                            QDir::toNativeSeparators(selected.directory));
+    if (QFileInfo::exists(QDir(selected.directory).filePath(QStringLiteral("server.jar")))) {
+        summary += QLatin1Char('\n') + tr("The folder already contains a server.jar; it will be replaced.");
+    }
+    m_summaryLabel->setText(summary);
 }
 
 void CreateServerDialog::loadVersions()
@@ -153,6 +194,7 @@ void CreateServerDialog::onVersionsLoaded()
         m_versionCombo->clear();
         m_versionCombo->setEditable(true);
         m_statusLabel->setText(tr("Could not load the version list (%1). Type a Minecraft version by hand.").arg(error));
+        updateState();
         return;
     }
 
@@ -161,6 +203,7 @@ void CreateServerDialog::onVersionsLoaded()
     if (versions.isEmpty()) {
         m_statusLabel->setText(tr("Mojang returned an empty version list. Type a Minecraft version by hand."));
         m_versionCombo->clear();
+        updateState();
         return;
     }
 
@@ -193,7 +236,7 @@ void CreateServerDialog::onVersionsLoaded()
         m_versionCombo->setCurrentIndex(0);
     }
 
-    m_okButton->setEnabled(!config().minecraftVersion.isEmpty());
+    updateState();
 }
 
 void CreateServerDialog::browseDirectory()

@@ -32,12 +32,26 @@ jobs:
         run: |
           git remote add upstream https://github.com/PrismLauncher/PrismLauncher.git
           git fetch upstream develop
-          
-          # Сливаем изменения из оригинального репозитория
-          git merge upstream/develop -m "chore: sync with upstream PrismLauncher/develop" --allow-unrelated-histories
-          
+
+          # Сливаем без коммита: CI-файлы форка нужно оставить своими.
+          git merge upstream/develop --no-ff --no-commit --allow-unrelated-histories
+
+          # GITHUB_TOKEN не может пушить файлы workflow, а CI у форка свой.
+          # shortcut: изменения CI из upstream пропускаются; переносить вручную, когда нужно.
+          git rm -r -q --cached .github/workflows
+          git checkout HEAD -- .github/workflows
+          git clean -fdq .github/workflows
+
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            if git diff --cached --quiet; then
+              git merge --abort
+            else
+              git commit -m "chore: sync with upstream PrismLauncher/develop"
+            fi
+          fi
+
           # Обновляем сабмодули при необходимости
           git submodule update --init --recursive
-          
+
           # Отправляем в ваш форк
           git push origin develop

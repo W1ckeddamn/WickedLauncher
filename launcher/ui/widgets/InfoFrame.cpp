@@ -254,7 +254,10 @@ void InfoFrame::updateWithSchematic(SchematicResource& schem)
 {
     {
         auto title = schem.name();
-        auto fileName = schem.getOriginalFileName();
+        auto fileName = schem.fileinfo().fileName();
+        if (!schem.enabled()) {
+            fileName.chop(9);  // Strip the .disabled suffix.
+        }
         if (!fileName.isEmpty() && fileName != title)
             title = title + " (" + fileName + ")";
         setName(title);

@@ -242,6 +242,9 @@ void OtherLogsPage::reload()
         if (m_instance) {
             setControlsEnabled(false);
         } else {
+            if (m_model && m_model->parent() == this) {
+                m_model->deleteLater();
+            }
             m_model = APPLICATION->logModel.get();
             m_proxy->setSourceModel(m_model);
             ui->text->setModel(m_proxy);
@@ -256,8 +259,8 @@ void OtherLogsPage::reload()
     if (!file.open(QFile::ReadOnly)) {
         setControlsEnabled(false);
         ui->btnReload->setEnabled(true);  // allow reload
-        m_currentFile = QString();
         QMessageBox::critical(this, tr("Error"), tr("Unable to open %1 for reading: %2").arg(m_currentFile, file.errorString()));
+        m_currentFile = QString();
     } else {
         auto setPlainText = [this](const QString& text) {
             QTextDocument* doc = ui->text->document();
@@ -303,6 +306,9 @@ void OtherLogsPage::reload()
         ui->text->clear();
         ui->text->setModel(nullptr);
         if (!m_instance) {
+            if (m_model && m_model->parent() == this) {
+                m_model->deleteLater();
+            }
             m_model = new LogModel(this);
             m_model->setMaxLines(getConsoleMaxLines(APPLICATION->settings()));
             m_model->setStopOnOverflow(shouldStopOnConsoleOverflow(APPLICATION->settings()));

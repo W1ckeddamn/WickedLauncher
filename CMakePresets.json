@@ -7,6 +7,45 @@
     },
     "configurePresets": [
         {
+            "name": "default",
+            "displayName": "Default",
+            "binaryDir": "build",
+            "installDir": "install",
+            "generator": "Ninja Multi-Config",
+            "toolchainFile": "cmake/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "Launcher_ENABLE_JAVA_DOWNLOADER": "ON",
+                "ENABLE_LTO": "ON"
+            }
+        },
+        {
+            "name": "ci",
+            "displayName": "CI",
+            "inherits": [
+                "default"
+            ],
+            "cacheVariables": {
+                "Launcher_BUILD_ARTIFACT": "$penv{ARTIFACT_NAME}",
+                "Launcher_BUILD_PLATFORM": "$penv{BUILD_PLATFORM}",
+                "Launcher_WARNING_AS_ERROR": "ON"
+            }
+        },
+        {
+            "name": "asan-tidy",
+            "displayName": "ASan+clang-tidy",
+            "inherits": [
+                "default"
+            ],
+            "cacheVariables": {
+                "DEBUG_ADDRESS_SANITIZER": "ON",
+                "USE_CLANG_TIDY": "ON",
+                "Launcher_WARNING_AS_ERROR": "ON"
+            },
+            "environment": {
+                "DEBUG_ADDRESS_SANITIZER": "1"
+            }
+        },
+        {
             "name": "base",
             "hidden": true,
             "binaryDir": "build",
@@ -18,7 +57,10 @@
                 "Launcher_BUILD_PLATFORM": "$penv{BUILD_PLATFORM}",
                 "Launcher_ENABLE_JAVA_DOWNLOADER": "ON",
                 "ENABLE_LTO": "ON"
-            }
+            },
+            "inherits": [
+                "default"
+            ]
         },
         {
             "name": "linux",
@@ -82,6 +124,21 @@
     ],
     "buildPresets": [
         {
+            "name": "default",
+            "displayName": "Default",
+            "configurePreset": "default"
+        },
+        {
+            "name": "ci",
+            "displayName": "CI",
+            "configurePreset": "ci"
+        },
+        {
+            "name": "asan-tidy",
+            "displayName": "ASan+clang-tidy",
+            "configurePreset": "asan-tidy"
+        },
+        {
             "name": "linux",
             "displayName": "Linux",
             "condition": {
@@ -132,8 +189,17 @@
     ],
     "testPresets": [
         {
-            "name": "base",
-            "hidden": true,
+            "name": "default",
+            "displayName": "Default",
+            "configurePreset": "default",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "ci",
+            "displayName": "CI",
+            "configurePreset": "ci",
             "output": {
                 "outputOnFailure": true,
                 "verbosity": "extra"
@@ -151,7 +217,7 @@
             "name": "linux",
             "displayName": "Linux",
             "inherits": [
-                "base"
+                "ci"
             ],
             "condition": {
                 "type": "equals",
@@ -164,7 +230,7 @@
             "name": "macos",
             "displayName": "macOS",
             "inherits": [
-                "base"
+                "ci"
             ],
             "condition": {
                 "type": "equals",
@@ -177,7 +243,7 @@
             "name": "macos_universal",
             "displayName": "macOS (Universal Binary)",
             "inherits": [
-                "base"
+                "ci"
             ],
             "condition": {
                 "type": "equals",
@@ -190,7 +256,7 @@
             "name": "windows_mingw",
             "displayName": "Windows (MinGW)",
             "inherits": [
-                "base"
+                "ci"
             ],
             "condition": {
                 "type": "equals",
@@ -203,7 +269,7 @@
             "name": "windows_msvc",
             "displayName": "Windows (MSVC)",
             "inherits": [
-                "base"
+                "ci"
             ],
             "condition": {
                 "type": "equals",

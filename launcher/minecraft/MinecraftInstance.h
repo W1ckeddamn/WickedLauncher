@@ -35,15 +35,20 @@
  */
 
 #pragma once
+
 #include <java/JavaVersion.h>
-#include <minecraft/mod/DataPackFolderModel.h>
 #include <QDir>
 #include <QProcess>
+
 #include "BaseInstance.h"
 #include "minecraft/launch/MinecraftTarget.h"
-#include "minecraft/mod/Mod.h"
 
+class DataPackFolderModel;
+class LaunchStep;
+class LaunchProfile;
+class Mod;
 class ModFolderModel;
+class PackProfile;
 class ResourceFolderModel;
 class ResourcePackFolderModel;
 class ShaderPackFolderModel;
@@ -52,9 +57,6 @@ class CustomPlayerModelFolderModel;
 class YesSteveModelFolderModel;
 class SchematicsFolderModel;
 class WorldList;
-class LaunchStep;
-class LaunchProfile;
-class PackProfile;
 
 class MinecraftInstance : public BaseInstance {
     Q_OBJECT
@@ -86,13 +88,11 @@ class MinecraftInstance : public BaseInstance {
     QString coreModsDir() const;
     QString nilModsDir() const;
     QString dataPacksDir();
-    QString modsCacheLocation() const;
     QString libDir() const;
     QString worldDir() const;
     QString resourcesDir() const;
     QDir jarmodsPath() const;
     QDir librariesPath() const;
-    QDir versionsPath() const;
     QString instanceConfigFolder() const override;
 
     // Path to the instance's minecraft directory.

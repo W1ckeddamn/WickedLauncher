@@ -1,5 +1,6 @@
 #include <QDir>
 #include <QFile>
+#include <QList>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -80,14 +81,14 @@ class Reply : public QNetworkReply {
 
 class Network : public QNetworkAccessManager {
    public:
-    QQueue<Response> responses;
+    QList<Response> responses;
     int requests = 0;
 
    protected:
     QNetworkReply* createRequest(Operation, const QNetworkRequest& request, QIODevice*) override
     {
         ++requests;
-        return new Reply(request, responses.isEmpty() ? Response{ {}, QNetworkReply::ContentNotFoundError } : responses.dequeue(), this);
+        return new Reply(request, responses.isEmpty() ? Response{ {}, QNetworkReply::ContentNotFoundError } : responses.takeFirst(), this);
     }
 };
 

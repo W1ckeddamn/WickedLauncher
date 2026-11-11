@@ -42,6 +42,7 @@ class ServerManagerTest : public QObject {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         QVERIFY(writeTextFile(dir.filePath(QStringLiteral("server.jar")), "unused"));
+        ServerManager::writeEula(dir.path(), true);
         ServerManager manager;
         ServerManager::Config config;
         config.directory = dir.path();
@@ -70,6 +71,7 @@ class ServerManagerTest : public QObject {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         QVERIFY(writeTextFile(dir.filePath(QStringLiteral("server.jar")), "unused"));
+        ServerManager::writeEula(dir.path(), true);
         ServerManager manager;
         ServerManager::Config config;
         config.directory = dir.path();

@@ -11,6 +11,7 @@
 #include <QString>
 #include <QUrl>
 #include <functional>
+#include <memory>
 
 #include "ServerManager.h"
 #include "tasks/Task.h"
@@ -19,6 +20,7 @@ class QNetworkAccessManager;
 class QNetworkReply;
 class QNetworkRequest;
 class QSaveFile;
+class QTemporaryDir;
 
 /**
  * Downloads and prepares a new server folder.
@@ -31,10 +33,8 @@ class ServerInstallTask : public Task {
     Q_OBJECT
 
    public:
-    ServerInstallTask(QNetworkAccessManager* network,
-                      QString directory,
-                      ServerManager::Kind kind,
-                      QString minecraftVersion);
+    ServerInstallTask(QNetworkAccessManager* network, QString directory, ServerManager::Kind kind, QString minecraftVersion);
+    ~ServerInstallTask() override;
 
     //! Name of the downloaded jar inside the server folder.
     QString jarName() const { return m_jarName; }
@@ -63,6 +63,8 @@ class ServerInstallTask : public Task {
     void finishJson();
     void finishDownload();
     void fail(const QString& reason);
+    void cancelReply();
+    bool publishDownloads();
     void resolveVanilla(const QByteArray& json);
     void resolveFabric(const QByteArray& json);
 
@@ -72,6 +74,7 @@ class ServerInstallTask : public Task {
     QSaveFile* m_file = nullptr;
     JsonHandler m_handler;
     QByteArray m_json;
+    std::unique_ptr<QTemporaryDir> m_stagingDirectory;
 
     QString m_directory;
     ServerManager::Kind m_kind = ServerManager::Kind::Unknown;

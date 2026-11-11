@@ -8,6 +8,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -16,6 +17,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSaveFile>
+#include <QTemporaryDir>
 
 #include <utility>
 
@@ -53,17 +55,28 @@ QJsonObject parseObject(const QByteArray& data)
 }
 }  // namespace
 
-ServerInstallTask::ServerInstallTask(QNetworkAccessManager* network,
-                                     QString directory,
-                                     ServerManager::Kind kind,
-                                     QString minecraftVersion)
-    : Task(),
-      m_network(network),
-      m_directory(std::move(directory)),
-      m_kind(kind),
-      m_version(std::move(minecraftVersion))
+ServerInstallTask::ServerInstallTask(QNetworkAccessManager* network, QString directory, ServerManager::Kind kind, QString minecraftVersion)
+    : Task(), m_network(network), m_directory(std::move(directory)), m_kind(kind), m_version(std::move(minecraftVersion))
 {
+    setAbortable(true);
     setStatus(tr("Preparing the server folder"));
+}
+
+ServerInstallTask::~ServerInstallTask()
+{
+    cancelReply();
+    delete m_file;
+}
+
+void ServerInstallTask::cancelReply()
+{
+    auto* reply = std::exchange(m_reply, nullptr);
+    if (reply != nullptr) {
+        // abort() can emit finished synchronously.
+        reply->disconnect(this);
+        reply->abort();
+        reply->deleteLater();
+    }
 }
 
 void ServerInstallTask::executeTask()
@@ -78,6 +91,15 @@ void ServerInstallTask::executeTask()
     }
     if (!FS::ensureFolderPathExists(m_directory)) {
         fail(tr("Could not create the server folder:\n%1").arg(m_directory));
+        return;
+    }
+    if (!QDir(m_directory).isEmpty(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot)) {
+        fail(tr("Choose an empty folder for a new server. Use Import Server for an existing server."));
+        return;
+    }
+    m_stagingDirectory = std::make_unique<QTemporaryDir>(QDir(m_directory).filePath(QStringLiteral(".wicked-install-XXXXXX")));
+    if (!m_stagingDirectory->isValid()) {
+        fail(tr("Could not create a temporary download folder."));
         return;
     }
 
@@ -123,8 +145,9 @@ void ServerInstallTask::executeTask()
             break;
         case ServerManager::Kind::Forge:
         case ServerManager::Kind::NeoForge:
-            fail(tr("Forge and NeoForge servers have to be created with their official installer. "
-                    "Create the server elsewhere and use \"Import Server\"."));
+            fail(
+                tr("Forge and NeoForge servers have to be created with their official installer. "
+                   "Create the server elsewhere and use \"Import Server\"."));
             return;
         case ServerManager::Kind::Quilt:
         case ServerManager::Kind::Unknown:
@@ -141,17 +164,14 @@ bool ServerInstallTask::abort()
         return true;
     }
     m_aborted = true;
-    if (m_reply != nullptr) {
-        m_reply->abort();
-        m_reply->deleteLater();
-        m_reply = nullptr;
-    }
+    cancelReply();
     if (m_file != nullptr) {
         m_file->cancelWriting();
         delete m_file;
         m_file = nullptr;
     }
     m_steps.clear();
+    m_stagingDirectory.reset();
     emitAborted();
     return true;
 }
@@ -163,6 +183,11 @@ void ServerInstallTask::enqueueJson(const QUrl& url, JsonHandler handler)
 
 void ServerInstallTask::enqueueDownload(const QUrl& url, const QString& fileName)
 {
+    if (fileName.isEmpty() || fileName == QStringLiteral(".") || fileName == QStringLiteral("..") || fileName.contains(QLatin1Char('/')) ||
+        fileName.contains(QLatin1Char('\\')) || fileName.contains(QLatin1Char(':'))) {
+        fail(tr("The server provider returned an invalid file name."));
+        return;
+    }
     m_steps.enqueue({ url, fileName, nullptr });
 }
 
@@ -172,7 +197,10 @@ void ServerInstallTask::startNext()
         return;
     }
     if (m_steps.isEmpty()) {
-        emitSucceeded();
+        if (publishDownloads()) {
+            m_stagingDirectory.reset();
+            emitSucceeded();
+        }
         return;
     }
 
@@ -204,7 +232,7 @@ void ServerInstallTask::startJson(const QUrl& url)
 
 void ServerInstallTask::startDownload(const QUrl& url, const QString& target)
 {
-    const auto path = FS::PathCombine(m_directory, target);
+    const auto path = m_stagingDirectory->filePath(target);
     m_file = new QSaveFile(path);
     if (!m_file->open(QIODevice::WriteOnly)) {
         delete m_file;
@@ -243,7 +271,7 @@ void ServerInstallTask::finishJson()
     }
     const auto error = reply->error();
     const auto errorString = reply->errorString();
-    const auto data = m_json;
+    const auto data = m_json + reply->readAll();
     reply->deleteLater();
 
     if (m_aborted) {
@@ -310,17 +338,41 @@ void ServerInstallTask::fail(const QString& reason)
     }
     m_aborted = true;
     m_steps.clear();
-    if (m_reply != nullptr) {
-        m_reply->abort();
-        m_reply->deleteLater();
-        m_reply = nullptr;
-    }
+    cancelReply();
     if (m_file != nullptr) {
         m_file->cancelWriting();
         delete m_file;
         m_file = nullptr;
     }
+    m_stagingDirectory.reset();
     emitFailed(reason);
+}
+
+bool ServerInstallTask::publishDownloads()
+{
+    // Downloads stay private until every request has completed. Never replace existing files.
+    const QDir staging(m_stagingDirectory->path());
+    const QDir destination(m_directory);
+    const auto files = staging.entryList(QDir::Files);
+    for (const auto& name : files) {
+        const QFileInfo existing(destination.filePath(name));
+        if (existing.exists() || existing.isSymLink()) {
+            fail(tr("Could not install %1. Existing files will not be replaced.").arg(existing.filePath()));
+            return false;
+        }
+    }
+    QStringList published;
+    for (const auto& name : files) {
+        if (!QFile::rename(staging.filePath(name), destination.filePath(name))) {
+            for (const auto& previous : published) {
+                QFile::rename(destination.filePath(previous), staging.filePath(previous));
+            }
+            fail(tr("Could not install %1. Existing files will not be replaced.").arg(destination.filePath(name)));
+            return false;
+        }
+        published.append(name);
+    }
+    return true;
 }
 
 void ServerInstallTask::resolveVanilla(const QByteArray& data)

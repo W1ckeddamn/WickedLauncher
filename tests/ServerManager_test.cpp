@@ -1,7 +1,11 @@
 #include <QDir>
 #include <QFile>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
+
+#include <iostream>
 
 #include "archive/ArchiveWriter.h"
 #include "minecraft/server/ServerManager.h"
@@ -33,6 +37,87 @@ class ServerManagerTest : public QObject {
     Q_OBJECT
 
    private slots:
+    void restartCancelsStopTimeout()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(writeTextFile(dir.filePath(QStringLiteral("server.jar")), "unused"));
+        ServerManager manager;
+        ServerManager::Config config;
+        config.directory = dir.path();
+        config.jar = QStringLiteral("server.jar");
+        config.javaPath = QCoreApplication::applicationFilePath();
+        config.extraArgs = { QStringLiteral("--server-process-helper") };
+        manager.setConfig(config);
+        auto* timer = manager.findChild<QTimer*>();
+        QVERIFY(timer != nullptr);
+        timer->setInterval(500);
+        QString error;
+        QVERIFY2(manager.start(&error), qPrintable(error));
+        manager.stop();
+        QVERIFY(timer->isActive());
+        QTRY_VERIFY(!manager.isRunning());
+        QVERIFY(!timer->isActive());
+        QVERIFY2(manager.start(&error), qPrintable(error));
+        QTest::qWait(600);
+        QVERIFY(manager.isRunning());
+        manager.stop();
+        QTRY_VERIFY(!manager.isRunning());
+    }
+
+    void buffersSplitUtf8Output()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(writeTextFile(dir.filePath(QStringLiteral("server.jar")), "unused"));
+        ServerManager manager;
+        ServerManager::Config config;
+        config.directory = dir.path();
+        config.jar = QStringLiteral("server.jar");
+        config.javaPath = QCoreApplication::applicationFilePath();
+        config.extraArgs = { QStringLiteral("--server-process-helper") };
+        manager.setConfig(config);
+        QString error;
+        QVERIFY2(manager.start(&error), qPrintable(error));
+        QSignalSpy output(&manager, &ServerManager::outputReady);
+        manager.sendCommand(QStringLiteral("output-first"));
+        QTest::qWait(50);
+        QVERIFY(output.isEmpty());
+        manager.sendCommand(QStringLiteral("output-second"));
+        QTRY_VERIFY(!output.isEmpty());
+        QCOMPARE(output.first().first().toString().trimmed(), QString::fromUtf8("\xD0\x96"));
+        manager.stop();
+        QTRY_VERIFY(!manager.isRunning());
+        bool hasTrailingOutput = false;
+        for (const auto& signal : output) {
+            hasTrailingOutput |= signal.first().toString() == QStringLiteral("trailing");
+        }
+        QVERIFY(hasTrailingOutput);
+    }
+
+    void inspectRejectsAmbiguousForgeVersions()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const auto root = QStringLiteral("libraries/net/minecraftforge/forge/");
+#if defined(Q_OS_WIN)
+        const auto name = QStringLiteral("win_args.txt");
+#else
+        const auto name = QStringLiteral("unix_args.txt");
+#endif
+        for (const auto& version : { QStringLiteral("1.20.1-47.2.0"), QStringLiteral("1.21-51.0.0") }) {
+            QVERIFY(QDir().mkpath(dir.filePath(root + version)));
+            QVERIFY(writeTextFile(dir.filePath(root + version + QLatin1Char('/') + name), "--nogui\n"));
+        }
+        ServerManager::Config config;
+        config.directory = dir.path();
+        QVERIFY(!ServerManager::inspect(config).valid);
+        config.argsFile = root + QStringLiteral("1.21-51.0.0/") + name;
+        const auto info = ServerManager::inspect(config);
+        QVERIFY(info.valid);
+        QCOMPARE(info.config.minecraftVersion, QStringLiteral("1.21"));
+    }
+
     void configRoundTrip()
     {
         QTemporaryDir dir;
@@ -69,8 +154,7 @@ class ServerManagerTest : public QObject {
         QVERIFY(dir.isValid());
         const auto folder = dir.filePath(QStringLiteral("server"));
         QVERIFY(QDir().mkpath(folder));
-        QVERIFY(writeJar(QDir(folder).filePath(QStringLiteral("server.jar")),
-                         R"({ "id": "1.20.4", "name": "1.20.4" })"));
+        QVERIFY(writeJar(QDir(folder).filePath(QStringLiteral("server.jar")), R"({ "id": "1.20.4", "name": "1.20.4" })"));
         QVERIFY(writeTextFile(QDir(folder).filePath(QStringLiteral("eula.txt")), "eula=true\n"));
 
         ServerManager::Config config;
@@ -137,6 +221,27 @@ class ServerManagerTest : public QObject {
     }
 };
 
-QTEST_GUILESS_MAIN(ServerManagerTest)
+int main(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        if (QString::fromLocal8Bit(argv[i]) == QStringLiteral("--server-process-helper")) {
+            std::string line;
+            while (std::getline(std::cin, line)) {
+                if (line == "output-first") {
+                    std::cout << "\xD0" << std::flush;
+                } else if (line == "output-second") {
+                    std::cout << "\x96\ntrailing" << std::flush;
+                }
+                if (line == "stop") {
+                    return 0;
+                }
+            }
+            return 0;
+        }
+    }
+    QCoreApplication application(argc, argv);
+    ServerManagerTest test;
+    return QTest::qExec(&test, argc, argv);
+}
 
 #include "ServerManager_test.moc"

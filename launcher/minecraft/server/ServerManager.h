@@ -6,10 +6,12 @@
 
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QProcess>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 
 class MinecraftInstance;
 
@@ -96,5 +98,7 @@ class ServerManager : public QObject {
     MinecraftInstance* m_instance = nullptr;
     Config m_config;
     QProcess* m_process = nullptr;
+    QTimer* m_stopTimer = nullptr;
+    QByteArray m_outputBuffer;
     bool m_stopping = false;
 };

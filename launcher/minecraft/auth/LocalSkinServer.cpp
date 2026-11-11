@@ -121,6 +121,7 @@ void LocalSkinServer::onNewConnection()
 {
     while (m_server->hasPendingConnections()) {
         QTcpSocket* socket = m_server->nextPendingConnection();
+        m_requests.insert(socket, {});
         connect(socket, &QTcpSocket::readyRead, this, &LocalSkinServer::onClientReadyRead);
         connect(socket, &QTcpSocket::disconnected, this, &LocalSkinServer::onClientDisconnected);
     }
@@ -132,14 +133,33 @@ void LocalSkinServer::onClientReadyRead()
     if (!socket)
         return;
 
-    QByteArray data = socket->readAll();
-    handleRequest(socket, data);
+    auto it = m_requests.find(socket);
+    if (it == m_requests.end()) {
+        return;
+    }
+    auto& data = it.value();
+    // Bound incomplete headers and wait for the complete request across TCP reads.
+    constexpr qint64 maxHeaderSize = 16 * 1024;
+    data.append(socket->read(maxHeaderSize + 1 - data.size()));
+    if (data.size() > maxHeaderSize) {
+        m_requests.erase(it);
+        socket->write("HTTP/1.1 431 Request Header Fields Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        socket->disconnectFromHost();
+        return;
+    }
+    if (!data.contains("\r\n\r\n") && !data.contains("\n\n")) {
+        return;
+    }
+    const auto request = data;
+    m_requests.erase(it);
+    handleRequest(socket, request);
 }
 
 void LocalSkinServer::onClientDisconnected()
 {
     auto* socket = qobject_cast<QTcpSocket*>(sender());
     if (socket) {
+        m_requests.remove(socket);
         socket->deleteLater();
     }
 }

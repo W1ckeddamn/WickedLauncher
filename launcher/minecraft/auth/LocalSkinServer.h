@@ -52,4 +52,5 @@ private:
     QTcpServer* m_server = nullptr;
     quint16 m_port = 0;
     QHash<QString, ProfileInfo> m_profiles;
+    QHash<class QTcpSocket*, QByteArray> m_requests;
 };

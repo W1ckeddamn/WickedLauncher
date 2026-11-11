@@ -26,6 +26,8 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
+#include <utility>
+
 #include "Application.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
@@ -124,10 +126,11 @@ CreateServerDialog::CreateServerDialog(MinecraftInstance* instance, QWidget* par
 
 CreateServerDialog::~CreateServerDialog()
 {
-    if (m_versionsReply != nullptr) {
-        m_versionsReply->abort();
-        m_versionsReply->deleteLater();
-        m_versionsReply = nullptr;
+    auto* reply = std::exchange(m_versionsReply, nullptr);
+    if (reply != nullptr) {
+        reply->disconnect(this);
+        reply->abort();
+        reply->deleteLater();
     }
 }
 
@@ -159,11 +162,12 @@ void CreateServerDialog::updateState()
         return;
     }
 
-    auto summary = tr("%1 %2 will be downloaded to %3.")
-                       .arg(ServerManager::kindName(selected.kind), selected.minecraftVersion,
-                            QDir::toNativeSeparators(selected.directory));
-    if (QFileInfo::exists(QDir(selected.directory).filePath(QStringLiteral("server.jar")))) {
-        summary += QLatin1Char('\n') + tr("The folder already contains a server.jar; it will be replaced.");
+    auto summary =
+        tr("%1 %2 will be downloaded to %3.")
+            .arg(ServerManager::kindName(selected.kind), selected.minecraftVersion, QDir::toNativeSeparators(selected.directory));
+    if (QDir(selected.directory).exists() &&
+        !QDir(selected.directory).isEmpty(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot)) {
+        summary += QLatin1Char('\n') + tr("Choose an empty folder. To use an existing server, use Import Server.");
     }
     m_summaryLabel->setText(summary);
 }
@@ -259,13 +263,11 @@ void CreateServerDialog::accept()
         return;
     }
 
-    if (QFileInfo::exists(QDir(selected.directory).filePath(QStringLiteral("server.jar")))) {
-        const auto answer = QMessageBox::question(
-            this, tr("Replace the existing server?"),
-            tr("The folder already contains a server.jar. Creating a new server will replace it.\n\nDo you want to continue?"));
-        if (answer != QMessageBox::Yes) {
-            return;
-        }
+    if (QDir(selected.directory).exists() &&
+        !QDir(selected.directory).isEmpty(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot)) {
+        QMessageBox::warning(this, tr("Server folder is not empty"),
+                             tr("Choose an empty folder for a new server. Use Import Server for an existing server."));
+        return;
     }
 
     QDialog::accept();

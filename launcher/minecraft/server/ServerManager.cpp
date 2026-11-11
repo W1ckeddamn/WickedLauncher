@@ -99,8 +99,7 @@ ServerManager::Kind detectKind(const QDir& dir, const QString& jar)
     if (lower.contains(QStringLiteral("forge"))) {
         return ServerManager::Kind::Forge;
     }
-    if (lower.contains(QStringLiteral("fabric")) ||
-        QFileInfo::exists(dir.filePath(QStringLiteral("fabric-server-launcher.properties")))) {
+    if (lower.contains(QStringLiteral("fabric")) || QFileInfo::exists(dir.filePath(QStringLiteral("fabric-server-launcher.properties")))) {
         return ServerManager::Kind::Fabric;
     }
     if (lower.contains(QStringLiteral("quilt"))) {
@@ -122,7 +121,7 @@ QString firstSubdirectory(const QDir& path)
         return {};
     }
     const auto entries = path.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    return entries.isEmpty() ? QString() : entries.first();
+    return entries.size() == 1 ? entries.first() : QString();
 }
 
 QString versionFromJar(const QString& jarPath)
@@ -182,7 +181,7 @@ QString detectVersion(const QDir& dir, const QString& jar, ServerManager::Kind k
     return {};
 }
 
-QString detectArgsFile(const QDir& dir, ServerManager::Kind kind)
+QStringList detectArgsFiles(const QDir& dir, ServerManager::Kind kind)
 {
     if (kind != ServerManager::Kind::Forge && kind != ServerManager::Kind::NeoForge) {
         return {};
@@ -190,28 +189,38 @@ QString detectArgsFile(const QDir& dir, ServerManager::Kind kind)
 
     const QString libraryRoot = kind == ServerManager::Kind::Forge ? QStringLiteral("libraries/net/minecraftforge/forge")
                                                                    : QStringLiteral("libraries/net/neoforged/neoforge");
-    const auto folder = firstSubdirectory(QDir(dir.filePath(libraryRoot)));
-    if (folder.isEmpty()) {
-        return {};
-    }
-
 #if defined(Q_OS_WIN)
     const QString fileName = QStringLiteral("win_args.txt");
 #else
     const QString fileName = QStringLiteral("unix_args.txt");
 #endif
-    const auto relative = QStringLiteral("%1/%2/%3").arg(libraryRoot, folder, fileName);
-    if (QFileInfo::exists(dir.filePath(relative))) {
-        return relative;
+    QStringList result;
+    const QDir libraries(dir.filePath(libraryRoot));
+    for (const auto& folder : libraries.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+        const auto relative = QStringLiteral("%1/%2/%3").arg(libraryRoot, folder, fileName);
+        if (QFileInfo(dir.filePath(relative)).isFile()) {
+            result.append(relative);
+        }
     }
-    return {};
+    return result;
 }
 }  // namespace
 
-ServerManager::ServerManager(QObject* parent) : QObject(parent) {}
+ServerManager::ServerManager(QObject* parent) : QObject(parent), m_stopTimer(new QTimer(this))
+{
+    m_stopTimer->setSingleShot(true);
+    m_stopTimer->setInterval(30000);
+    connect(m_stopTimer, &QTimer::timeout, this, [this] {
+        if (m_stopping && isRunning()) {
+            appendOutput(tr("[launcher] The server did not stop in time; killing it."));
+            kill();
+        }
+    });
+}
 
 ServerManager::~ServerManager()
 {
+    m_stopTimer->stop();
     if (m_process == nullptr || m_process->state() == QProcess::NotRunning) {
         return;
     }
@@ -439,7 +448,17 @@ ServerManager::Info ServerManager::inspect(const Config& input)
 
     const auto jar = pickJar(dir, input.jar);
     const auto kind = input.kind == Kind::Unknown ? detectKind(dir, jar) : input.kind;
-    const auto argsFile = input.argsFile.isEmpty() ? detectArgsFile(dir, kind) : input.argsFile;
+    const auto candidates = input.argsFile.isEmpty() ? detectArgsFiles(dir, kind) : QStringList{ input.argsFile };
+    if (candidates.size() > 1) {
+        info.warnings.append(tr("Multiple server argument files were found. Set argsFile in wicked-server.json to the one to launch:\n%1")
+                                 .arg(candidates.join(QLatin1Char('\n'))));
+        return info;
+    }
+    const auto argsFile = candidates.isEmpty() ? QString() : candidates.first();
+    if (!argsFile.isEmpty() && !QFileInfo(dir.filePath(argsFile)).isFile()) {
+        info.warnings.append(tr("The server argument file is missing: %1").arg(argsFile));
+        return info;
+    }
 
     // Modern Forge/NeoForge servers have no launch jar at all; they only use their argument file.
     if (jar.isEmpty() && argsFile.isEmpty()) {
@@ -451,6 +470,9 @@ ServerManager::Info ServerManager::inspect(const Config& input)
     info.config.argsFile = argsFile;
     info.config.kind = kind;
     info.config.minecraftVersion = detectVersion(dir, jar, kind, input.minecraftVersion);
+    if (input.minecraftVersion.isEmpty() && !argsFile.isEmpty() && (kind == Kind::Forge || kind == Kind::NeoForge)) {
+        info.config.minecraftVersion = versionFromFolderName(QFileInfo(argsFile).dir().dirName());
+    }
 
     QFile eula(dir.filePath(QStringLiteral("eula.txt")));
     if (eula.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -591,12 +613,13 @@ bool ServerManager::start(QString* error)
     }
 
     m_stopping = false;
+    m_stopTimer->stop();
+    m_outputBuffer.clear();
     m_process->setWorkingDirectory(m_config.directory);
     m_process->setProgram(java);
     m_process->setArguments(arguments);
 
-    appendOutput(tr("[launcher] Starting %1 %2 with Java %3")
-                     .arg(kindName(m_config.kind), m_config.minecraftVersion, java));
+    appendOutput(tr("[launcher] Starting %1 %2 with Java %3").arg(kindName(m_config.kind), m_config.minecraftVersion, java));
     appendOutput(QStringLiteral("[launcher] %1 %2").arg(java, arguments.join(QLatin1Char(' '))));
 
     m_process->start();
@@ -612,7 +635,7 @@ bool ServerManager::start(QString* error)
 
 void ServerManager::stop()
 {
-    if (!isRunning()) {
+    if (!isRunning() || m_stopping) {
         return;
     }
     m_stopping = true;
@@ -620,12 +643,7 @@ void ServerManager::stop()
     sendCommand(QStringLiteral("stop"));
 
     // A server that ignores "stop" is killed after half a minute so the launcher stays responsive.
-    QTimer::singleShot(30000, this, [this] {
-        if (isRunning()) {
-            appendOutput(tr("[launcher] The server did not stop in time; killing it."));
-            kill();
-        }
-    });
+    m_stopTimer->start();
 }
 
 void ServerManager::kill()
@@ -665,15 +683,22 @@ void ServerManager::onProcessReadyRead()
     if (m_process == nullptr) {
         return;
     }
-    auto text = QString::fromUtf8(m_process->readAllStandardOutput());
-    if (!text.isEmpty() && !text.endsWith(QLatin1Char('\n'))) {
-        text.append(QLatin1Char('\n'));
+    m_outputBuffer.append(m_process->readAllStandardOutput());
+    const auto lastNewline = m_outputBuffer.lastIndexOf('\n');
+    if (lastNewline >= 0) {
+        appendOutput(QString::fromUtf8(m_outputBuffer.left(lastNewline + 1)));
+        m_outputBuffer.remove(0, lastNewline + 1);
     }
-    appendOutput(text);
 }
 
 void ServerManager::onProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
+    m_stopTimer->stop();
+    onProcessReadyRead();
+    if (!m_outputBuffer.isEmpty()) {
+        appendOutput(QString::fromUtf8(m_outputBuffer));
+        m_outputBuffer.clear();
+    }
     Q_UNUSED(exitCode)
     if (status == QProcess::CrashExit) {
         appendOutput(tr("[launcher] The server process crashed."));

@@ -83,5 +83,11 @@ ecm_add_test(ModChecker_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MA
 ecm_add_test(ServerManager_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME ServerManager)
 
+ecm_add_test(ServerInstallTask_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME ServerInstallTask)
+
+ecm_add_test(LocalSkinServer_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME LocalSkinServer)
+
 ecm_add_test(NewsEntry_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME NewsEntry)

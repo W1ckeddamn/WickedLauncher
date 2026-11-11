@@ -387,7 +387,14 @@ void ServerPage::collectConfig()
 {
     auto config = m_manager->config();
     const auto directory = m_directoryEdit->text().trimmed();
-    config.directory = directory.isEmpty() ? QString() : QDir::cleanPath(QDir::fromNativeSeparators(directory));
+    const auto newDirectory = directory.isEmpty() ? QString() : QDir(directory).absolutePath();
+    if (newDirectory != QDir(config.directory).absolutePath()) {
+        config.jar.clear();
+        config.argsFile.clear();
+        config.minecraftVersion.clear();
+        config.kind = ServerManager::Kind::Unknown;
+    }
+    config.directory = newDirectory;
     config.javaPath = QDir::fromNativeSeparators(m_javaEdit->text().trimmed());
     config.memoryMb = m_memorySpin->value();
     config.extraArgs = QProcess::splitCommand(m_extraArgsEdit->text());

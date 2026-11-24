@@ -91,8 +91,6 @@ set(CORE_SOURCES
     MMCTime.h
     MMCTime.cpp
 
-    MTPixmapCache.h
-
     # Assertion helper
     AssertHelpers.h
 )
@@ -1477,6 +1475,12 @@ foreach(target ${Launcher_TARGETS})
             -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-missing-field-initializers
         )
     endif()
+
+    # Wrangle in windows.h and its nastiness
+    # https://learn.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers
+    target_compile_definitions(${target} PRIVATE
+        $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:WIN32_LEAN_AND_MEAN NOGDI NOMINMAX>
+    )
 endforeach()
 
 set_target_properties(${Launcher_TARGETS} PROPERTIES COMPILE_WARNING_AS_ERROR ${Launcher_WARNING_AS_ERROR})
